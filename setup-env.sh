@@ -6,3 +6,5 @@ fi
 
 source .venv/bin/activate
 pip install -r requirements.txt
+
+# sysctl -w vm.max_map_count=262144
