@@ -1,6 +1,9 @@
 # Docker volumes
 volumes/
 
+# Saved Encoders
+encoder/
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
