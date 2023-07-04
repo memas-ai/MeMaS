@@ -14,12 +14,27 @@ class Corpus(ABC):
     Corpus interface used to hide the different implementations
     """
     @abstractmethod
-    def store_and_index(self, document: str):
-        pass
+    def store_and_index(self, document: str, citation: Citation) -> bool:
+        """Store and index a "document"
+
+        Args:
+            document (str): text block we want to store
+            citation (Citation): citation of the "document"
+
+        Returns:
+            bool: success or not
+        """
 
     @abstractmethod
     def search(self, clue: str) -> list[tuple[str, Citation]]:
-        pass
+        """Search for (document,citation) pairs related to the clue
+
+        Args:
+            clue (str): chat query to search for
+
+        Returns:
+            list[tuple[str, Citation]]: a list of (document, citation) pairs
+        """
 
     @abstractmethod
     def generate_search_instructions(self, clue: str) -> any:
@@ -31,4 +46,3 @@ class Corpus(ABC):
         Returns:
             any: _description_
         """
-        pass

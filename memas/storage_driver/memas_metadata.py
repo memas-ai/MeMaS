@@ -29,17 +29,26 @@ READ_AND_WRITE: Final[int] = STD_READ_PERMISSION & STD_WRITE_PERMISSION
 
 
 class NamespaceNameToId(Model):
+    """
+    Maps full pathnames to ids, for both corpus and namespace.
+    """
+    # Full pathname, like `ns1.ns2.ns3` and `ns1.ns2:corpus`
     fullname = columns.Ascii(partition_key=True, max_length=MAX_PATH_LENGTH)
     id = columns.UUID(required=True)
 
 
 class NamespaceParent(Model):
+    """
+    Maps child (both namespace and corpus) ids to parent ids within the namespace. 
+    """
     child_id = columns.UUID(partition_key=True)
     parent_id = columns.UUID(required=True)
 
 
-# With current schemas, rename will be really hard to support. But if we switch to IDs, things would take at least double the queries.
 class NamespaceInfo(Model):
+    """
+    Table storing the Namespace's information
+    """
     parent_id = columns.UUID(partition_key=True)
     namespace_id = columns.UUID(primary_key=True)
 
@@ -47,12 +56,16 @@ class NamespaceInfo(Model):
         required=True, max_length=MAX_PATH_LENGTH - MAX_SEGMENT_LENGTH, min_length=0)
     namespace_name = columns.Ascii(
         required=True, max_length=MAX_NS_NAME_LENGTH)
-    # depth = columns.Integer(required=True)
+    # Default set of (shared) corpora that is queried. This won't include the direct child corpora
+    #   of this namespace, since those will always be queried unless specified otherwise.
     query_default_corpus = columns.Set(columns.UUID, default=set())
     created_at = columns.DateTime(required=True)
 
 
 class CorpusInfo(Model):
+    """
+    Table storing the Corpus' information
+    """
     parent_id = columns.UUID(partition_key=True)
     corpus_id = columns.UUID(primary_key=True)
 
@@ -63,10 +76,33 @@ class CorpusInfo(Model):
     created_at = columns.DateTime(required=True)
 
 
-def parse_pathname(pathname: str) -> tuple[str, str]:
+def split_namespace_pathname(pathname: str) -> tuple[str, str]:
+    """Parses a namespace pathname into parent pathname and child name (NOT PATHNAME)
+
+    Args:
+        pathname (str): the full namespace pathname
+
+    Returns:
+        tuple[str, str]: (parent_pathname, namespace_name) pair
+    """
     tokens = pathname.rsplit(NAMESPACE_SEPARATOR, 1)
     if len(tokens) == 1:
         return (ROOT_NAME, pathname)
+    return (tokens[0], tokens[1])
+
+
+def split_corpus_pathname(corpus_pathname: str) -> tuple[str, str]:
+    """Parses a corpus pathname into parent pathname and child name (NOT PATHNAME)
+
+    Args:
+        pathname (str): the full corpus pathname
+
+    Returns:
+        tuple[str, str]: (parent_pathname, corpus_name) pair
+    """
+    tokens = corpus_pathname.split(CORPUS_SEPARATOR)
+    if len(tokens) != 2:
+        raise Exception()
     return (tokens[0], tokens[1])
 
 
@@ -84,20 +120,26 @@ class MemasMetadataStoreImpl(MemasMetadataStore):
         return result.id
 
     def _get_ids_by_name(self, fullname: str) -> tuple[uuid.UUID, uuid.UUID]:
-        parent_pathname, child_name = parse_pathname(fullname)
+        if CORPUS_SEPARATOR in fullname:
+            parent_pathname, child_name = split_corpus_pathname(fullname)
+        else:
+            parent_pathname, child_name = split_namespace_pathname(fullname)
+
         # if parent is root
         if parent_pathname == ROOT_NAME:
             child_id = NamespaceNameToId.get(fullname=fullname).id
             return (ROOT_ID, child_id)
 
-        with BatchQuery() as b:
-            child_result = NamespaceInfo.batch(b).get(fullname=fullname)
+        with BatchQuery() as batch_query:
+            child_result = NamespaceInfo.batch(
+                batch_query).get(fullname=fullname)
             parent_result = NamespaceInfo.batch(
-                b).get(fullname=parent_pathname)
+                batch_query).get(fullname=parent_pathname)
         return (parent_result.id, child_result.id)
 
     def create_namespace(self, namespace_pathname: str, *, parent_id: uuid.UUID = None) -> uuid.UUID:
-        parent_pathname, child_name = parse_pathname(namespace_pathname)
+        parent_pathname, child_name = split_namespace_pathname(
+            namespace_pathname)
         if parent_id is None:
             parent_id = self._get_id_by_name(parent_pathname)
 
@@ -114,16 +156,17 @@ class MemasMetadataStoreImpl(MemasMetadataStore):
         #       a huge number of users
         #   On the other hand, this is costly to handle properly; if we were to separate this
         #       batch query into two queries, we increase the risk of interruptions
-        with BatchQuery() as b:
-            NamespaceInfo.batch(b).create(parent_id=parent_id, namespace_id=namespace_id,
-                                          parent_path=parent_pathname, namespace_name=child_name, created_at=now)
-            NamespaceParent.batch(b).create(
+        with BatchQuery() as batch_query:
+            NamespaceInfo.batch(batch_query).create(
+                parent_id=parent_id, namespace_id=namespace_id,
+                parent_path=parent_pathname, namespace_name=child_name, created_at=now)
+            NamespaceParent.batch(batch_query).create(
                 child_id=namespace_id, parent_id=parent_id)
 
         return namespace_id
 
-    def create_corpus(self, parent_pathname: str, corpus_name: str, corpus_type: CorpusType, permissions: int, *, parent_id: uuid.UUID = None) -> uuid.UUID:
-        corpus_pathname = parent_pathname + CORPUS_SEPARATOR + corpus_name
+    def create_corpus(self, corpus_pathname: str, corpus_type: CorpusType, permissions: int, *, parent_id: uuid.UUID = None) -> uuid.UUID:
+        parent_pathname, corpus_name = split_corpus_pathname(corpus_pathname)
         if parent_id is None:
             parent_id = self._get_id_by_name(parent_pathname)
 
@@ -136,20 +179,21 @@ class MemasMetadataStoreImpl(MemasMetadataStore):
             raise NamespaceExistsException(corpus_pathname) from ignored
 
         # FIXME: Same issue with namespace id colliding.
-        with BatchQuery() as b:
-            CorpusInfo.batch(b).create(parent_id=parent_id, corpus_id=corpus_id,
-                                       corpus_name=corpus_name, corpus_type=str(corpus_type), permissions=permissions, created_at=now)
-            NamespaceParent.batch(b).create(
+        with BatchQuery() as batch_query:
+            CorpusInfo.batch(batch_query).create(
+                parent_id=parent_id, corpus_id=corpus_id, corpus_name=corpus_name,
+                corpus_type=str(corpus_type), permissions=permissions, created_at=now)
+            NamespaceParent.batch(batch_query).create(
                 child_id=corpus_id, parent_id=parent_id)
         return corpus_id
 
-    def create_conversation_corpus(self, parent_pathname, corpus_name):
-        self.create_corpus(parent_pathname=parent_pathname, corpus_name=corpus_name,
-                           corpus_type=CorpusType.CONVERSATION, permissions=READ_AND_WRITE)
+    def create_conversation_corpus(self, corpus_pathname: str, *, parent_id: uuid.UUID = None) -> uuid.UUID:
+        self.create_corpus(corpus_pathname=corpus_pathname, corpus_type=CorpusType.CONVERSATION,
+                           permissions=READ_AND_WRITE, parent_id=parent_id)
 
-    def create_knowledge_corpus(self, parent_pathname, corpus_name):
-        self.create_corpus(parent_pathname=parent_pathname, corpus_name=corpus_name,
-                           corpus_type=CorpusType.KNOWLEDGE, permissions=STD_READ_PERMISSION)
+    def create_knowledge_corpus(self, corpus_pathname: str, *, parent_id: uuid.UUID = None) -> uuid.UUID:
+        self.create_corpus(corpus_pathname=corpus_pathname, corpus_type=CorpusType.KNOWLEDGE,
+                           permissions=STD_READ_PERMISSION, parent_id=parent_id)
 
 
 SINGLETON: MemasMetadataStore = MemasMetadataStoreImpl()

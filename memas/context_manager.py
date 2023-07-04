@@ -53,6 +53,9 @@ class ContextManager:
         self.es: Elasticsearch
 
     def first_init(self):
+        """This is used to run init operations we only want to run the very first server launch. 
+        TODO: refactor this entire mess...
+        """
         cassandra_cluster: Cluster = Cluster(
             [self.consts.cassandra_ip], port=self.consts.cassandra_port, protocol_version=4)
         session: Session = cassandra_cluster.connect()
@@ -69,12 +72,15 @@ class ContextManager:
         #     "default", session=self.cassandra, default=True)
 
     def init_clients(self) -> None:
+        # connect to cassandra
         connection.setup(
             ['127.0.0.1'], self.consts.cassandra_keyspace, protocol_version=4)
 
         # TODO: properly support https
+        # connect to elastic search
         es_addr = f"http://{self.consts.es_ip}:{self.consts.es_port}"
-        self.es = Elasticsearch(es_addr, basic_auth=("elastic", self.consts.es_pwd))
+        self.es = Elasticsearch(es_addr, basic_auth=(
+            "elastic", self.consts.es_pwd))
 
         # connect to milvus
         connections.connect("memas", host=self.consts.milvus_ip,

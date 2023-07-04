@@ -8,6 +8,7 @@ NAMESPACE_SEPARATOR: Final[str] = "."
 
 
 # Corpus names in the context of pathnames will look like "xxx.yyy.zzz:corpus_name"
+# Root level corpora will still look like ":corpus_name"
 CORPUS_SEPARATOR: Final[str] = ":"
 
 

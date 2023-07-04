@@ -43,10 +43,10 @@ class MilvusUSESentenceVectorStore(CorpusVectorStore):
         self.collection: Collection
         self.encoder = hub.load(USE_module_url)
 
-    def embed(self, vec):
+    def _embed(self, vec):
         return self.encoder(vec).numpy()
 
-    def init(self):
+    def first_init(self):
         self.collection: Collection = Collection(
             "corpus-USE-sentence-store", sentance_schema)
         index = {
@@ -56,7 +56,12 @@ class MilvusUSESentenceVectorStore(CorpusVectorStore):
         }
         self.collection.create_index(EMBEDDING_FIELD, index)
 
+    def init(self):
+        self.collection: Collection = Collection(
+            "corpus-USE-sentence-store", sentance_schema)
+        self.collection.load()
+
     def search(self, corpus_id: UUID, clue: str):
-        result = self.collection.search(self.embed([clue]).tolist(), EMBEDDING_FIELD, param={
-        }, limit=10, expr=f"{CORPUS_FIELD} == '{corpus_id.hex}'")
+        result = self.collection.search(self._embed([clue]).tolist(), EMBEDDING_FIELD, param={},
+                                        limit=10, expr=f"{CORPUS_FIELD} == '{corpus_id.hex}'")
         print(result)
