@@ -5,7 +5,7 @@ from datetime import datetime
 from cassandra.cqlengine import columns, management
 from cassandra.cqlengine.models import Model
 from cassandra.cqlengine.query import BatchQuery, LWTException
-from memas.interface.exceptions import NamespaceExistsException
+from memas.interface.exceptions import BadArgumentException, IllegalNameException, NamespaceExistsException
 from memas.interface.namespace import ROOT_ID, ROOT_NAME, NAMESPACE_SEPARATOR, CORPUS_SEPARATOR, is_pathname_format_valid, is_name_format_valid
 from memas.interface.storage_driver import MemasMetadataStore
 
@@ -138,6 +138,12 @@ class MemasMetadataStoreImpl(MemasMetadataStore):
         return (parent_result.id, child_result.id)
 
     def create_namespace(self, namespace_pathname: str, *, parent_id: uuid.UUID = None) -> uuid.UUID:
+        if namespace_pathname == ROOT_NAME:
+            raise BadArgumentException(
+                f"\"\" is reserved for the root namespace!")
+        if not is_pathname_format_valid(namespace_pathname):
+            raise IllegalNameException(namespace_pathname)
+
         parent_pathname, child_name = split_namespace_pathname(
             namespace_pathname)
         if parent_id is None:
@@ -167,6 +173,9 @@ class MemasMetadataStoreImpl(MemasMetadataStore):
 
     def create_corpus(self, corpus_pathname: str, corpus_type: CorpusType, permissions: int, *, parent_id: uuid.UUID = None) -> uuid.UUID:
         parent_pathname, corpus_name = split_corpus_pathname(corpus_pathname)
+        if not is_pathname_format_valid(corpus_pathname) or not is_name_format_valid(corpus_name):
+            raise IllegalNameException(corpus_pathname)
+
         if parent_id is None:
             parent_id = self._get_id_by_name(parent_pathname)
 
