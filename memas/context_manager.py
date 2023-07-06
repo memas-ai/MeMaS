@@ -83,7 +83,7 @@ class ContextManager:
             "elastic", self.consts.es_pwd))
 
         # connect to milvus
-        connections.connect("memas", host=self.consts.milvus_ip,
+        connections.connect("default", host=self.consts.milvus_ip,
                             port=self.consts.milvus_port)
 
     def init_datastores(self) -> None:
