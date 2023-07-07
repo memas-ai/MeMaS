@@ -2,7 +2,7 @@
 volumes/
 
 # Saved Encoders
-encoder/
+/encoder/
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

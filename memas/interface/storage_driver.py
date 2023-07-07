@@ -1,7 +1,8 @@
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from uuid import UUID
-from interface.corpus import Citation
+from memas.interface.corpus import Citation
+from memas.interface.encoder import TextEncoder
 
 
 class StorageDriver(ABC):
@@ -127,4 +128,30 @@ class CorpusDocumentStore(StorageDriver):
 
 
 class CorpusVectorStore(StorageDriver):
-    pass
+    """
+        Corpus Vector Store for storing and searching with vectors
+    """
+
+    def __init__(self, encoder: TextEncoder) -> None:
+        super().__init__()
+        self.encoder: TextEncoder = encoder
+
+    @abstractmethod
+    def save_document(self, doc_entity: DocumentEntity):
+        """Saves a document into the vector store
+
+        Args:
+            doc_entity (DocumentEntity): Document Entity object
+        """
+
+    @abstractmethod
+    def search(self, corpus_id: UUID, clue: str) -> list[tuple[float, UUID, UUID]]:
+        """Search corpus with clue
+
+        Args:
+            corpus_id (UUID): corpus id
+            clue (str): clue to search with
+
+        Returns:
+            list[tuple[float, UUID, UUID]]: _description_
+        """

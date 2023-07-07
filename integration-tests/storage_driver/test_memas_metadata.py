@@ -13,9 +13,8 @@ def test_create_namespace(cassandra_client):
     metadata = MemasMetadataStoreImpl()
     metadata.init()
 
-    namespace_id = metadata.create_namespace("integ-test", parent_id=ROOT_ID)
-    assert metadata._get_id_by_name("integ-test") == namespace_id
+    namespace_id = metadata.create_namespace("integ_test", parent_id=ROOT_ID)
+    assert metadata._get_id_by_name("integ_test") == namespace_id
 
     with pytest.raises(NamespaceExistsException):
-        namespace_id = metadata.create_namespace(
-            "integ-test", parent_id=ROOT_ID)
+        namespace_id = metadata.create_namespace("integ_test", parent_id=ROOT_ID)
