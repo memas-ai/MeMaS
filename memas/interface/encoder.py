@@ -7,7 +7,7 @@ class TextEncoder(ABC):
     def init(self):
         """Initialize the encoder
         """
-    
+
     @abstractmethod
     def embed(self, text: str) -> numpy.ndarray:
         """Embed the supplied text

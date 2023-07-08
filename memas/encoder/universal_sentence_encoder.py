@@ -12,7 +12,7 @@ USE_VECTOR_DIMENSION = 512
 
 
 class USETextEncoder(TextEncoder):
-    def __init__(self, model_url: str=USE_LOCAL_MODEL_URL) -> None:
+    def __init__(self, model_url: str = USE_LOCAL_MODEL_URL) -> None:
         super().__init__()
         self.model_url: str = model_url
 

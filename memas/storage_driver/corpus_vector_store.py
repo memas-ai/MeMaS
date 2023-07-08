@@ -51,6 +51,10 @@ class USESentenceObject:
         return [[self.composite_id], [self.corpus_id], [self.text_preview], self.embedding, [self.start_index], [self.end_index]]
 
 
+def hash_sentence_id(document_id: uuid.UUID, sentence: str) -> uuid.UUID:
+    return uuid.uuid5(document_id, sentence)
+
+
 def convert_batch(objects: list[USESentenceObject]):
     composite_ids, corpus_ids, text_previews, embeddings, start_indices, end_indices = [], [], [], [], [], []
     for obj in objects:
@@ -105,7 +109,8 @@ class MilvusUSESentenceVectorStore(CorpusVectorStore):
 
         start = 0
         for sentence in sentences:
-            sentence_id = uuid.uuid4()
+            # deterministically generate the sentence id, so we can later get/delete them
+            sentence_id = hash_sentence_id(doc_entity.document_id, sentence)
             composite_id = doc_entity.document_id.hex + sentence_id.hex
             end = start + len(sentence)
             objects.append(USESentenceObject(composite_id, doc_entity.corpus_id.hex,
