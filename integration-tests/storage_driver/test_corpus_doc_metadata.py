@@ -3,15 +3,14 @@ from memas.interface.corpus import Citation
 from memas.storage_driver.corpus_doc_metadata import CorpusDocumentMetadataStoreImpl
 
 
-def test_init(cassandra_client):
-    metadata = CorpusDocumentMetadataStoreImpl()
+metadata = CorpusDocumentMetadataStoreImpl()
+
+
+def test_init():
     metadata.init()
 
 
-def test_insert_and_get(cassandra_client):
-    metadata = CorpusDocumentMetadataStoreImpl()
-    metadata.init()
-
+def test_insert_and_get():
     corpus_id = uuid.uuid4()
     document_id = uuid.uuid4()
 

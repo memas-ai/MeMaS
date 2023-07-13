@@ -11,7 +11,3 @@ def recall():
 @dataplane.route('/remember', methods=["POST"])
 def remember():
     return "World Hello"
-
-
-def init_app(app: Flask):
-    app.register_blueprint(dataplane)

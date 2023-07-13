@@ -5,15 +5,14 @@ from memas.interface.storage_driver import DocumentEntity
 from memas.storage_driver.corpus_vector_store import MilvusUSESentenceVectorStore
 
 
-def test_init(clean_milvus):
-    store = MilvusUSESentenceVectorStore()
-    store.first_init()
+store = MilvusUSESentenceVectorStore()
 
 
-def test_save_then_search(clean_milvus):
-    store = MilvusUSESentenceVectorStore()
-    store.first_init()
+def test_init():
+    store.init()
 
+
+def test_save_then_search():
     corpus_id1 = uuid.uuid4()
     corpus_id2 = uuid.uuid4()
     document_id1 = uuid.uuid4()

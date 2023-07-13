@@ -102,7 +102,7 @@ def split_corpus_pathname(corpus_pathname: str) -> tuple[str, str]:
     """
     tokens = corpus_pathname.split(CORPUS_SEPARATOR)
     if len(tokens) != 2:
-        raise Exception()
+        raise IllegalNameException(corpus_pathname)
     return (tokens[0], tokens[1])
 
 
@@ -112,6 +112,9 @@ class MemasMetadataStoreImpl(MemasMetadataStore):
         management.sync_table(NamespaceParent)
         management.sync_table(NamespaceInfo)
         management.sync_table(CorpusInfo)
+
+    def first_init(self):
+        self.init()
 
     def _get_id_by_name(self, fullname: str) -> uuid.UUID:
         if fullname == ROOT_NAME:
@@ -139,8 +142,7 @@ class MemasMetadataStoreImpl(MemasMetadataStore):
 
     def create_namespace(self, namespace_pathname: str, *, parent_id: uuid.UUID = None) -> uuid.UUID:
         if namespace_pathname == ROOT_NAME:
-            raise BadArgumentException(
-                f"\"\" is reserved for the root namespace!")
+            raise BadArgumentException("\"\" is reserved for the root namespace!")
         if not is_pathname_format_valid(namespace_pathname):
             raise IllegalNameException(namespace_pathname)
 

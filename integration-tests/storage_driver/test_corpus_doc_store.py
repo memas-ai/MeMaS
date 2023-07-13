@@ -6,24 +6,15 @@ from memas.interface.storage_driver import DocumentEntity
 import uuid
 import time
 
-# Override the corpus index so that integration tests run on a different index
-corpus_doc_store.CORPUS_INDEX = "memas-integ-test"
-
 
 def test_init(es_client: Elasticsearch):
-    # clean the index for reliable testing
-    try:
-        es_client.indices.delete(index="memas-integ-test")
-    except Exception as ignored:
-        pass
-
     doc_store = corpus_doc_store.ESDocumentStore(es_client)
-
-    assert doc_store.init()
+    doc_store.init()
 
 
 def test_save_then_search(es_client):
     doc_store = corpus_doc_store.ESDocumentStore(es_client)
+    doc_store.init()
 
     corpus_id1 = uuid.uuid1()
     corpus_id2 = uuid.uuid4()

@@ -22,6 +22,9 @@ class CorpusDocumentMetadataStoreImpl(CorpusDocumentMetadataStore):
     def init(self):
         management.sync_table(DocumentMetadata)
 
+    def first_init(self):
+        self.init()
+
     def insert_document_metadata(self, corpus_id: UUID, document_id: UUID, document_name: str, citation: Citation) -> bool:
         """Inserts document metadata
 

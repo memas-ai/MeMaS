@@ -12,7 +12,3 @@ def create_user():
 @controlplane.route('/create_corpus', methods=["POST"])
 def create_corpus():
     ctx.memas_metadata.create_knowledge_corpus()
-
-
-def init_app(app: Flask):
-    app.register_blueprint(controlplane)

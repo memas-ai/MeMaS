@@ -9,11 +9,10 @@ from pymilvus import (
     Collection,
 )
 from memas.encoder.universal_sentence_encoder import USE_VECTOR_DIMENSION, USETextEncoder
-from memas.interface.encoder import TextEncoder
 from memas.interface.storage_driver import CorpusVectorStore, DocumentEntity
 
 
-USE_COLLECTION_NAME = "corpus-USE-sentence-store"
+USE_COLLECTION_NAME = "corpus_USE_sentence_store"
 
 
 CORPUS_FIELD = "corpus_id"
@@ -119,3 +118,6 @@ class MilvusUSESentenceVectorStore(CorpusVectorStore):
             start = end
 
         self.collection.insert(convert_batch(objects))
+
+
+SINGLETON: CorpusVectorStore = MilvusUSESentenceVectorStore()

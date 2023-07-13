@@ -1,7 +1,7 @@
 from typing import Final
 from uuid import UUID
-from memas.interface.storage_driver import CorpusDocumentStore, DocumentEntity
 from elasticsearch import Elasticsearch
+from memas.interface.storage_driver import CorpusDocumentStore, DocumentEntity
 
 
 CORPUS_INDEX: Final[str] = "memas-documents"
@@ -19,6 +19,10 @@ class ESDocumentStore(CorpusDocumentStore):
         self.es_index: str = CORPUS_INDEX
 
     def init(self):
+        # nothing needed for ES
+        return
+
+    def first_init(self):
         mapping = {
             "properties": {
                 CORPUS_FIELD: {

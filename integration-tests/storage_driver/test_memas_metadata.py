@@ -4,13 +4,14 @@ from memas.interface.namespace import ROOT_ID
 from memas.storage_driver.memas_metadata import MemasMetadataStoreImpl
 
 
-def test_init(cassandra_client):
-    metadata = MemasMetadataStoreImpl()
+metadata = MemasMetadataStoreImpl()
+
+
+def test_init():
     metadata.init()
 
 
-def test_create_namespace(cassandra_client):
-    metadata = MemasMetadataStoreImpl()
+def test_create_namespace():
     metadata.init()
 
     namespace_id = metadata.create_namespace("integ_test", parent_id=ROOT_ID)

@@ -11,7 +11,14 @@ class StorageDriver(ABC):
     """
     @abstractmethod
     def init(self):
-        pass
+        """Initialize the storage driver. This is ran every time on server startup
+        """
+
+    @abstractmethod
+    def first_init(self):
+        """First time initiliaze the storage driver. This is mostly for operations that you only 
+        want to run once, like create table
+        """
 
 
 class MemasMetadataStore(StorageDriver):
