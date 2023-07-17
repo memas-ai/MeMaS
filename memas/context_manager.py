@@ -7,8 +7,9 @@ from cassandra.cqlengine import connection as c_connection
 from elasticsearch import Elasticsearch
 from pymilvus import connections as milvus_connection
 from memas.interface.exceptions import NotProperlyInitializedException
-from memas.interface.storage_driver import CorpusDocumentMetadataStore, CorpusDocumentStore, CorpusVectorStore, MemasMetadataStore, StorageDriver
+from memas.interface.storage_driver import CorpusDocumentMetadataStore, CorpusDocumentStore, CorpusVectorStore, MemasMetadataStore
 from memas.storage_driver import corpus_doc_metadata, corpus_doc_store, corpus_vector_store, memas_metadata
+from memas.corpus.corpus_provider import CorpusProvider
 
 
 def read_env(name: str, default: str = None) -> str:
@@ -64,6 +65,9 @@ class ContextManager:
 
         # clients
         self.es: Elasticsearch
+
+        # Corpus provider
+        self.corpus_provider: CorpusProvider = CorpusProvider()
 
     def setup_cassandra_keyspace(self):
         """Setup the cassandra keyspace. We only want to run the very first server launch. 

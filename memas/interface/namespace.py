@@ -37,7 +37,7 @@ def is_pathname_format_valid(pathname: str) -> bool:
     return True
 
 
-NAME_REGEX: re.Pattern = re.compile(r"[A-Za-z_]+")
+NAME_REGEX: re.Pattern = re.compile(r"[A-Za-z0-9_]+")
 
 
 def is_name_format_valid(name: str) -> bool:

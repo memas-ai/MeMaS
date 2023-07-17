@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from uuid import UUID
-from memas.interface.corpus import Citation
+from memas.interface.corpus import Citation, CorpusInfo
 from memas.interface.encoder import TextEncoder
 
 
@@ -64,6 +64,26 @@ class MemasMetadataStore(StorageDriver):
 
         Returns:
             UUID: uuid of the just created corpus
+        """
+
+    def get_corpus_info(self, corpus_pathname: str) -> CorpusInfo:
+        """Gets the corpus info using the corpus pathname
+
+        Args:
+            corpus_pathname (str): the full pathname of the corpus
+
+        Returns:
+            CorpusInfo: Corpus Info object
+        """
+
+    def get_query_corpora(self, namespace_pathname: str) -> set[UUID]:
+        """Retrieves the set of corpus ids this namespace user should query
+
+        Args:
+            namespace_pathname (str): the pathname of the querying user
+
+        Returns:
+            set[UUID]: set of corpus ids
         """
 
 

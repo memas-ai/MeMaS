@@ -1,5 +1,12 @@
-from dataclasses import dataclass
 from abc import ABC, abstractmethod
+from dataclasses import dataclass
+from enum import Enum
+from uuid import UUID
+
+
+class CorpusType(Enum):
+    KNOWLEDGE = "knowledge"
+    CONVERSATION = "conversation"
 
 
 @dataclass
@@ -7,6 +14,13 @@ class Citation:
     source_uri: str
     source_name: str
     description: str
+
+
+@dataclass
+class CorpusInfo:
+    corpus_pathname: str
+    corpus_id: UUID
+    corpus_type: CorpusType
 
 
 class Corpus(ABC):
@@ -46,3 +60,10 @@ class Corpus(ABC):
         Returns:
             any: _description_
         """
+
+
+class CorpusFactory(ABC):
+    @abstractmethod
+    def produce(self, corpus_id: UUID):
+        # FIXME: do we want to pass in any arguments?
+        pass

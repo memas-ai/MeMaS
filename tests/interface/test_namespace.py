@@ -28,6 +28,8 @@ def test_pathname_format_invalid(pathname):
     "x",
     "aBc",
     "MeMaS",
+    "xyz99",
+    "12345",
     "a" * 31,
     "max_yu",  # the _ is one of the few allowed non-character symbols
 ])
