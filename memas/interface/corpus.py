@@ -13,6 +13,7 @@ class CorpusType(Enum):
 class Citation:
     source_uri: str
     source_name: str
+    corpus_name: str
     description: str
 
 
@@ -27,6 +28,10 @@ class Corpus(ABC):
     """
     Corpus interface used to hide the different implementations
     """
+    def __init__(self, corpus_ID : UUID, corpus_name : str):
+        self.corpus_ID = corpus_ID
+        self.corpus_name = corpus_name
+        
     @abstractmethod
     def store_and_index(self, document: str, citation: Citation) -> bool:
         """Store and index a "document"

@@ -1,6 +1,7 @@
 import uuid
 from dataclasses import dataclass
 import numpy as np
+import time
 from pymilvus import (
     connections,
     FieldSchema,
@@ -16,9 +17,13 @@ USE_COLLECTION_NAME = "corpus_USE_sentence_store"
 
 
 CORPUS_FIELD = "corpus_id"
+DOCUMENT_NAME = "document_name"
 EMBEDDING_FIELD = "embedding"
 START_FIELD = "start_index"
 END_FIELD = "end_index"
+TEXT_PREVIEW = "text_preview"
+
+MAX_TEXT_LENGTH = 1024
 
 
 fields = [
@@ -28,7 +33,9 @@ fields = [
                 max_length=64, is_primary=True, auto_id=False),
     FieldSchema(name=CORPUS_FIELD, dtype=DataType.VARCHAR,
                 max_length=32, is_partition_key=True),
-    FieldSchema(name="text_preview", dtype=DataType.VARCHAR, max_length=32),
+    FieldSchema(name=DOCUMENT_NAME, dtype=DataType.VARCHAR,
+                max_length=256),
+    FieldSchema(name="text_preview", dtype=DataType.VARCHAR, max_length=MAX_TEXT_LENGTH),
     FieldSchema(name=EMBEDDING_FIELD, dtype=DataType.FLOAT_VECTOR, dim=USE_VECTOR_DIMENSION),
     FieldSchema(name=START_FIELD, dtype=DataType.INT64),
     FieldSchema(name=END_FIELD, dtype=DataType.INT64),
@@ -41,13 +48,14 @@ sentance_schema = CollectionSchema(
 class USESentenceObject:
     composite_id: str
     corpus_id: str
+    document_name: str
     text_preview: str
     embedding: np.ndarray
     start_index: int
     end_index: int
 
     def to_data(self):
-        return [[self.composite_id], [self.corpus_id], [self.text_preview], self.embedding, [self.start_index], [self.end_index]]
+        return [[self.composite_id], [self.corpus_id], [self.document_name], [self.text_preview], self.embedding, [self.start_index], [self.end_index]]
 
 
 def hash_sentence_id(document_id: uuid.UUID, sentence: str) -> uuid.UUID:
@@ -55,16 +63,17 @@ def hash_sentence_id(document_id: uuid.UUID, sentence: str) -> uuid.UUID:
 
 
 def convert_batch(objects: list[USESentenceObject]):
-    composite_ids, corpus_ids, text_previews, embeddings, start_indices, end_indices = [], [], [], [], [], []
+    composite_ids, corpus_ids, document_names, text_previews, embeddings, start_indices, end_indices = [], [], [], [], [], [], []
     for obj in objects:
         composite_ids.append(obj.composite_id)
         corpus_ids.append(obj.corpus_id)
+        document_names.append(obj.document_name)
         text_previews.append(obj.text_preview)
         embeddings.append(obj.embedding)
         start_indices.append(obj.start_index)
         end_indices.append(obj.end_index)
 
-    return [composite_ids, corpus_ids, text_previews, np.row_stack(embeddings), start_indices, end_indices]
+    return [composite_ids, corpus_ids, document_names, text_previews, np.row_stack(embeddings), start_indices, end_indices]
 
 
 class MilvusUSESentenceVectorStore(CorpusVectorStore):
@@ -88,21 +97,24 @@ class MilvusUSESentenceVectorStore(CorpusVectorStore):
         self.collection.load()
         self.encoder.init()
 
-    def search(self, corpus_id: uuid.UUID, clue: str) -> list[tuple[float, uuid.UUID, uuid.UUID]]:
+    def search(self, corpus_id: uuid.UUID, clue: str) -> list[tuple[float, DocumentEntity, int, int]]:
         result = self.collection.search(self.encoder.embed([clue]).tolist(), EMBEDDING_FIELD, param={},
                                         limit=10, expr=f"{CORPUS_FIELD} == \"{corpus_id.hex}\"",
-                                        output_fields=[CORPUS_FIELD, START_FIELD, END_FIELD])
+                                        output_fields=[CORPUS_FIELD, START_FIELD, END_FIELD, DOCUMENT_NAME, TEXT_PREVIEW])
         output = []
         for hits in result:
             for hit in hits:
-                output.append((hit.distance, uuid.UUID(hit.entity.corpus_id), uuid.UUID(hit.id[:32])))
+                doc_entity = DocumentEntity(uuid.UUID(hit.entity.corpus_id), uuid.UUID(hit.id[:32]), hit.entity.document_name, hit.entity.text_preview)
+                output.append((hit.distance, doc_entity, hit.entity.start_index, hit.entity.end_index))
+        print("vec empty check ")
+        print(self.collection.is_empty)
         return output
 
     def split_doc(self, document: str) -> list[str]:
         # TODO: implement something proper
         return list(filter(lambda x: x != "", document.split(". ")))
 
-    def save_document(self, doc_entity: DocumentEntity):
+    def save_document(self, doc_entity: DocumentEntity) -> bool:
         sentences = self.split_doc(doc_entity.document)
         objects: list[USESentenceObject] = []
 
@@ -112,12 +124,14 @@ class MilvusUSESentenceVectorStore(CorpusVectorStore):
             sentence_id = hash_sentence_id(doc_entity.document_id, sentence)
             composite_id = doc_entity.document_id.hex + sentence_id.hex
             end = start + len(sentence)
-            objects.append(USESentenceObject(composite_id, doc_entity.corpus_id.hex,
-                           sentence[:32], self.encoder.embed([sentence]), start, end))
+            objects.append(USESentenceObject(composite_id, doc_entity.corpus_id.hex, doc_entity.document_name,
+                           sentence[:MAX_TEXT_LENGTH], self.encoder.embed([sentence]), start, end))
 
             start = end
 
-        self.collection.insert(convert_batch(objects))
+        insert_count = self.collection.insert(convert_batch(objects)).insert_count
+        
+        return insert_count == len(sentences)
 
 
 SINGLETON: CorpusVectorStore = MilvusUSESentenceVectorStore()

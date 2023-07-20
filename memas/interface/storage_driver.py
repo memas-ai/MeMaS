@@ -164,7 +164,7 @@ class CorpusVectorStore(StorageDriver):
         self.encoder: TextEncoder = encoder
 
     @abstractmethod
-    def save_document(self, doc_entity: DocumentEntity):
+    def save_document(self, doc_entity: DocumentEntity) ->  bool:
         """Saves a document into the vector store
 
         Args:
@@ -172,7 +172,7 @@ class CorpusVectorStore(StorageDriver):
         """
 
     @abstractmethod
-    def search(self, corpus_id: UUID, clue: str) -> list[tuple[float, UUID, UUID]]:
+    def search(self, corpus_id: UUID, clue: str) -> list[tuple[float, DocumentEntity, int, int]]:
         """Search corpus with clue
 
         Args:
