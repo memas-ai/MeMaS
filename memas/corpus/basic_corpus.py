@@ -64,9 +64,6 @@ class BasicCorpus(Corpus) :
         # Combine the results and remove duplicates
         results = normalize_and_combine(doc_store_results, vec_store_results)
 
-        print("real results : ")
-        print(results)
-
         return results
 
 
@@ -74,8 +71,6 @@ class BasicCorpus(Corpus) :
 
     def generate_search_instructions(self, clue: str) -> any:
         pass
-
-
 
 
 
@@ -103,11 +98,11 @@ def normalize_and_combine(doc_results : list, vec_results : list) :
     doc_results_normalized = [[(x - doc_min_score) / (doc_max_score - doc_min_score) ,y,z] for [x,y,z] in doc_results]
     vec_results_normalized = [[(vec_max_score - x) / (vec_max_score - vec_min_score),y,z] for [x,y,z] in vec_results]
 
-    print("For Doc scores normalized")
-    print(doc_results_normalized)
+    # print("For Doc scores normalized")
+    # print(doc_results_normalized)
 
-    print("For vec scores normalized")
-    print(vec_results_normalized)
+    # print("For vec scores normalized")
+    # print(vec_results_normalized)
 
     # Remove duplicates and merge
     # TODO : replace this with a way to preserve and reward good scoring
@@ -139,8 +134,12 @@ def normalize_and_combine(doc_results : list, vec_results : list) :
     unique_vectors = [i for j, i in enumerate(vec_results_normalized) if j not in duplicate_vec_indicies]
 
     doc_results_normalized.extend(unique_vectors)
-    # Sort by scoring
-    doc_results_normalized.sort(key=lambda x: x[0])
+
+    # Sort by descending scoring so best results come first
+    doc_results_normalized.sort(key=lambda x: x[0], reverse=True)
+
+    #print("When normalized merged and sorted the results are : ")
+    #print(doc_results_normalized)
 
     # Cutoff by maximum character limits
 
