@@ -18,3 +18,7 @@ class NamespaceExistsException(Exception):
 class NotProperlyInitializedException(Exception):
     def __init__(self, msg: str) -> None:
         super().__init__(msg)
+
+class SentenceLengthOverflowException(Exception):
+    def __init__(self, sentence_len: int) -> None:
+        super().__init__("Sentence length is {len} which exceededs limit".format(len=sentence_len))

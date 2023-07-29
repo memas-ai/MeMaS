@@ -43,14 +43,14 @@ class ESDocumentStore(CorpusDocumentStore):
             index=self.es_index, mappings=mapping)
         return response["acknowledged"]
 
-    def save_document(self, doc_entity: DocumentEntity) -> bool:
+    def save_document(self, chunkID: str, doc_entity: DocumentEntity) -> bool:
         doc = {
             CORPUS_FIELD: doc_entity.corpus_id.hex,
             NAME_FIELD: doc_entity.document_name,
             DOC_FIELD: doc_entity.document
         }
         response = self.es.create(
-            index=self.es_index, id=doc_entity.document_id.hex, document=doc)
+            index=self.es_index, id=chunkID, document=doc)
         return response['result'] == 'created'
 
     def search_corpus(self, corpus_id: UUID, clue: str) -> list[tuple[float, DocumentEntity]]:
@@ -70,6 +70,6 @@ class ESDocumentStore(CorpusDocumentStore):
         for hit in response["hits"]["hits"]:
             data = hit["_source"]
             result.append((hit["_score"], DocumentEntity(corpus_id=UUID(data[CORPUS_FIELD]), document_id=UUID(
-                hit["_id"]), document_name=data[NAME_FIELD], document=data[DOC_FIELD])))
+                hit["_id"][:32]), document_name=data[NAME_FIELD], document=data[DOC_FIELD])))
 
         return result

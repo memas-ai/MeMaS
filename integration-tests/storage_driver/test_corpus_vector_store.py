@@ -14,21 +14,24 @@ def test_save_then_search2():
     print("before UIDs")
     corpus_id1 = uuid.uuid4()
     corpus_id2 = uuid.uuid4()
+    document_id0 = uuid.uuid4()
     document_id1 = uuid.uuid4()
     document_id2 = uuid.uuid4()
     document_id3 = uuid.uuid4()
 
     best_match_str = "The sun is high. California sunshine is great. "
 
+    store.save_document(DocumentEntity(corpus_id1, document_id0, "doc0",
+                        "Before This is a runon sentence meant to test the logic of the splitting capabilites but that is only the start, there is nothing that can break this sentecne up other than some handy logic even in the worst case, too bad I only know how to use commas"))
     store.save_document(DocumentEntity(corpus_id1, document_id1, "doc1",
-                        "The sun is high. California sunshine is great. "))
+                        "The sun is high! California sunshine is great. Did you catch my quest? Oh oh! lol"))
     store.save_document(DocumentEntity(corpus_id1, document_id2, "doc2",
                         "I picked up my phone and then dropped it again"))
     store.save_document(DocumentEntity(corpus_id2, document_id3, "doc3", "The weather is great today"))
     time.sleep(1)
 
     result = store.search(corpus_id1, "How's the weather today?")
-    print("after inserts")
+
     #assert False
     # Test that the text recovered for a short sentence matched the expected length
     assert len(result[0][1].document) == result[0][3] - result[0][2]

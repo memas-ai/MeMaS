@@ -1,6 +1,7 @@
 import uuid
 from dataclasses import dataclass
 import numpy as np
+import re
 import time
 from pymilvus import (
     connections,
@@ -111,8 +112,61 @@ class MilvusUSESentenceVectorStore(CorpusVectorStore):
         return output
 
     def split_doc(self, document: str) -> list[str]:
-        # TODO: implement something proper
-        return list(filter(lambda x: x != "", document.split(". ")))
+        first_split = list(filter(lambda x: x != "", re.split(r'[.?!]\s*', document)))
+
+        final_sentences = []
+        # Any "sentence" longer than 1024 characters gets split further. Splits are attempted
+        # at word boundaries. Words longer than 2*word_search_size that lie exactly on the boundary of a segment
+        # is not guaranteed to be unsplit. Input is too malformed at that point, so just split whereever.
+        for segment in first_split :
+            if (len(segment) < MAX_TEXT_LENGTH) :
+                final_sentences.append(segment)
+            else :
+                segment_index = 0
+                word_search_size = 9
+
+                # Case 1: Find end word boundary for start of segment
+                end_index = segment_index + MAX_TEXT_LENGTH
+                space_index_end = segment.find(" ", max(0, end_index - word_search_size), 
+                                min(end_index + word_search_size, len(segment)))
+                
+                # If a word boundary at end is found reassign index to accomodate.
+                if space_index_end > 0 :
+                    end_index = space_index_end
+                
+                new_segment = segment[0 : end_index]
+                final_sentences.append(new_segment)
+                segment_index = end_index
+
+                # Case 2: Find start and end word boundaries on both sides for all middle sentences
+                while segment_index < len(segment) - MAX_TEXT_LENGTH :
+                    end_index = segment_index + MAX_TEXT_LENGTH
+                    space_index_end = segment.find(" ", max(0, end_index - word_search_size), 
+                                    min(end_index + word_search_size, len(segment)))
+                    
+                    # If a word boundary at end is found reassign index to accomodate.
+                    if space_index_end > 0 :
+                        end_index = space_index_end
+                    
+                    new_segment = segment[segment_index : end_index]
+                    final_sentences.append(new_segment)
+                    segment_index = end_index
+                
+                # Case 3: Find boundary for last sentence.
+                final_segment_start_index = len(segment) - MAX_TEXT_LENGTH
+                last_chunk_space_index = segment.find(" ", max(0, final_segment_start_index - word_search_size), 
+                min(final_segment_start_index + word_search_size, len(segment)))
+                
+                if last_chunk_space_index > 0 :
+                    final_segment_start_index = last_chunk_space_index 
+
+                # TODO : On Search, Need to combine last fragment with previous if both are present 
+                final_sentences.append(segment[final_segment_start_index:])
+
+        # print("final sentences resulted in : ")
+        # print(final_sentences)
+        # assert False
+        return final_sentences
 
     def save_document(self, doc_entity: DocumentEntity) -> bool:
         sentences = self.split_doc(doc_entity.document)

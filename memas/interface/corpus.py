@@ -33,7 +33,7 @@ class Corpus(ABC):
         self.corpus_name = corpus_name
         
     @abstractmethod
-    def store_and_index(self, document: str, citation: Citation) -> bool:
+    def store_and_index(self, document: str, document_name: str, citation: Citation) -> bool:
         """Store and index a "document"
 
         Args:

@@ -1,11 +1,14 @@
 #from search_redirect import SearchSettings
 import uuid
 from functools import reduce
-from interface.corpus import Corpus
-from interface.corpus import Citation
-from interface.storage_driver import DocumentEntity
+from memas.interface.corpus import Corpus
+from memas.interface.corpus import Citation
+from memas.interface.storage_driver import DocumentEntity
 from memas.interface.exceptions import SentenceLengthOverflowException
 from memas.context_manager import ctx
+from memas.corpus.corpus_helpers import segment_document
+
+MAX_SEGMENT_LENGTH = 1536
 
 class BasicCorpus(Corpus) :
 
@@ -13,18 +16,28 @@ class BasicCorpus(Corpus) :
         super().__init__(corpus_id, corpus_name)
 
     """
-    The function stores a document in both the elastic search DB as well as the vecDB.
+    The function stores a document in the elastic search DB, vecDB, and doc MetaData.
     Returns True on Success, False on Failure
     """
     def store_and_index(self, document: str, document_name: str, citation: Citation) -> bool:
         doc_id = uuid.uuid4()
         doc_entity = DocumentEntity(self.corpus_ID, doc_id, document_name, document)
 
-        ctx.corpus_metadata.insert_document_metadata(self.corpus_ID, doc_id, document_name, citation)
+        ctx.corpus_vec.save_document(doc_entity)
 
         # Divide longer documents for document store
-        segment_document(document)
-        return ctx.corpus_doc.save_document(doc_entity) and ctx.corpus_vec.save_document(doc_entity)
+        document_chunks = segment_document(document, MAX_SEGMENT_LENGTH)
+        chunk_num = 1
+        for chunk in document_chunks :
+            # Create the new IDs for the document chunk combo
+            chunkID = doc_id.hex + '{:032b}'.format(chunk_num)
+            chunk_num = chunk_num + 1
+            doc_chunk_entity = DocumentEntity(self.corpus_ID, doc_id, document_name, chunk)
+            ctx.corpus_doc.save_document(chunkID, doc_chunk_entity)
+            
+        # TODO: Need to redo this return to be indicative of complete success
+        return ctx.corpus_metadata.insert_document_metadata(self.corpus_ID, doc_id, chunk_num, document_name, citation)
+
 
 
     """
@@ -53,8 +66,7 @@ class BasicCorpus(Corpus) :
 
             # Verify that the text recovered from the vectors fits the maximum sentence criteria
             if end_index - start_index != len(doc_entity.document) :
-                # TODO : Create function to fetch the rest of the sentence from the document DB
-                print("Sentence too long and full fetch not implemented")
+                print("Sanity check, this case should never get triggered")
                 raise SentenceLengthOverflowException(end_index - start_index)
 
             citation = ctx.corpus_metadata.get_document_citation(self.corpus_ID, doc_entity.document_id)
@@ -65,8 +77,6 @@ class BasicCorpus(Corpus) :
         results = normalize_and_combine(doc_store_results, vec_store_results)
 
         return results
-
-
 
 
     def generate_search_instructions(self, clue: str) -> any:
@@ -80,8 +90,8 @@ def normalize_and_combine(doc_results : list, vec_results : list) :
     # Vec scores are based on distance, so smaller is better. Need to inverse the
     # order to be comparable to something like elastic search where bigger is better
     # Multiply by -1 and add by Max of the list.
-    doc_scores = ([x for [x,y,z] in doc_results])
-    vec_scores = ([x for [x,y,z] in vec_results])
+    doc_scores = ([x[0] for x in doc_results])
+    vec_scores = ([x[0] for x in vec_results])
 
     doc_max_score = max(doc_scores)
     doc_min_score = min(doc_scores)
