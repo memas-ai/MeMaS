@@ -10,6 +10,7 @@ store = MilvusUSESentenceVectorStore()
 def test_init():
     store.init()
 
+
 def test_save_then_search2():
     print("before UIDs")
     corpus_id1 = uuid.uuid4()
@@ -32,7 +33,7 @@ def test_save_then_search2():
 
     result = store.search(corpus_id1, "How's the weather today?")
 
-    #assert False
+    # assert False
     # Test that the text recovered for a short sentence matched the expected length
     assert len(result[0][1].document) == result[0][3] - result[0][2]
 

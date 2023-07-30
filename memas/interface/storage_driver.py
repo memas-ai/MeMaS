@@ -92,7 +92,7 @@ class CorpusDocumentMetadataStore(StorageDriver):
         Metadata store for storing citations and other metadata for documents within the corpus.
     """
     @abstractmethod
-    def insert_document_metadata(self, corpus_id: UUID, document_id: UUID, num_segments:int, document_name: str, citation: Citation) -> bool:
+    def insert_document_metadata(self, corpus_id: UUID, document_id: UUID, num_segments: int, document_name: str, citation: Citation) -> bool:
         """Inserts document metadata
 
         Args:
@@ -165,7 +165,7 @@ class CorpusVectorStore(StorageDriver):
         self.encoder: TextEncoder = encoder
 
     @abstractmethod
-    def save_document(self, doc_entity: DocumentEntity) ->  bool:
+    def save_document(self, doc_entity: DocumentEntity) -> bool:
         """Saves a document into the vector store
 
         Args:

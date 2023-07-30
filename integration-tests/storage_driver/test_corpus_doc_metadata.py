@@ -14,6 +14,6 @@ def test_insert_and_get():
     corpus_id = uuid.uuid4()
     document_id = uuid.uuid4()
 
-    citation = Citation("google.com", "test google", "just a simple test")
-    metadata.insert_document_metadata(corpus_id, document_id, "test", citation)
+    citation = Citation("google.com", "test google", "googlrCorpus", "just a simple test")
+    metadata.insert_document_metadata(corpus_id, document_id, 1, "test", citation)
     assert metadata.get_document_citation(corpus_id, document_id) == citation

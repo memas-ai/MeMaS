@@ -23,11 +23,15 @@ def test_save_then_search(es_client):
     document_id2 = uuid.uuid4()
     document_id3 = uuid.uuid4()
 
-    assert doc_store.save_document(DocumentEntity(
+    chunk_id1 = document_id1.hex + '{:032b}'.format(0)
+    chunk_id2 = document_id2.hex + '{:032b}'.format(0)
+    chunk_id3 = document_id3.hex + '{:032b}'.format(0)
+
+    assert doc_store.save_document(chunk_id1, DocumentEntity(
         corpus_id1, document_id1, "test1", "MeMaS is great and easy to use"))
-    assert doc_store.save_document(DocumentEntity(
+    assert doc_store.save_document(chunk_id2, DocumentEntity(
         corpus_id2, document_id2, "test2", "MeMaS is coded in python and is horrible"))
-    assert doc_store.save_document(DocumentEntity(
+    assert doc_store.save_document(chunk_id3, DocumentEntity(
         corpus_id1, document_id3, "test3", "Memory Management System"))
 
     time.sleep(2)

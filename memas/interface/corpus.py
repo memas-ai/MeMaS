@@ -28,10 +28,11 @@ class Corpus(ABC):
     """
     Corpus interface used to hide the different implementations
     """
-    def __init__(self, corpus_ID : UUID, corpus_name : str):
-        self.corpus_ID = corpus_ID
+
+    def __init__(self, corpus_id: UUID, corpus_name: str):
+        self.corpus_id = corpus_id
         self.corpus_name = corpus_name
-        
+
     @abstractmethod
     def store_and_index(self, document: str, document_name: str, citation: Citation) -> bool:
         """Store and index a "document"

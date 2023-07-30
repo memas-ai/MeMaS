@@ -1,4 +1,4 @@
-#from search_redirect import SearchSettings
+# from search_redirect import SearchSettings
 import uuid
 from functools import reduce
 from memas.interface.corpus import Corpus
@@ -10,66 +10,66 @@ from memas.corpus.corpus_helpers import segment_document
 
 MAX_SEGMENT_LENGTH = 1536
 
-class BasicCorpus(Corpus) :
 
-    def __init__(self, corpus_id: uuid.UUID, corpus_name : str):
+class BasicCorpus(Corpus):
+
+    def __init__(self, corpus_id: uuid.UUID, corpus_name: str):
         super().__init__(corpus_id, corpus_name)
 
     """
     The function stores a document in the elastic search DB, vecDB, and doc MetaData.
     Returns True on Success, False on Failure
     """
+
     def store_and_index(self, document: str, document_name: str, citation: Citation) -> bool:
         doc_id = uuid.uuid4()
-        doc_entity = DocumentEntity(self.corpus_ID, doc_id, document_name, document)
+        doc_entity = DocumentEntity(self.corpus_id, doc_id, document_name, document)
 
         ctx.corpus_vec.save_document(doc_entity)
 
         # Divide longer documents for document store
         document_chunks = segment_document(document, MAX_SEGMENT_LENGTH)
         chunk_num = 1
-        for chunk in document_chunks :
+        for chunk in document_chunks:
             # Create the new IDs for the document chunk combo
             chunkID = doc_id.hex + '{:032b}'.format(chunk_num)
             chunk_num = chunk_num + 1
-            doc_chunk_entity = DocumentEntity(self.corpus_ID, doc_id, document_name, chunk)
+            doc_chunk_entity = DocumentEntity(self.corpus_id, doc_id, document_name, chunk)
             ctx.corpus_doc.save_document(chunkID, doc_chunk_entity)
-            
+
         # TODO: Need to redo this return to be indicative of complete success
-        return ctx.corpus_metadata.insert_document_metadata(self.corpus_ID, doc_id, chunk_num, document_name, citation)
-
-
+        return ctx.corpus_metadata.insert_document_metadata(self.corpus_id, doc_id, chunk_num, document_name, citation)
 
     """
     The most basic search of a document store via Elastic Search and a Vector DB
     via ANN. Combines the result via a simple concatenation.
     """
+
     def search(self, clue: str) -> list[tuple[str, Citation]]:
         # TODO : Replace the fields that constrain and describe the search with a SearchSettings Object
         # that can be passed in
-        vector_search_count : int = 10    
+        vector_search_count: int = 10
 
         doc_store_results: list[tuple[str, Citation]] = []
-        temp_res = ctx.corpus_doc.search_corpus(self.corpus_ID, clue)
-        # Search the document store 
-        for score, doc_entity in temp_res :
+        temp_res = ctx.corpus_doc.search_corpus(self.corpus_id, clue)
+        # Search the document store
+        for score, doc_entity in temp_res:
             document_text = doc_entity.document
-            citation = ctx.corpus_metadata.get_document_citation(self.corpus_ID, doc_entity.document_id)
+            citation = ctx.corpus_metadata.get_document_citation(self.corpus_id, doc_entity.document_id)
 
             doc_store_results.append([score, document_text, citation])
-            
 
         # Search for the vectors
         vec_store_results: list[tuple[str, Citation]] = []
-        temp_res2 = ctx.corpus_vec.search(self.corpus_ID, clue) 
-        for score, doc_entity, start_index, end_index in temp_res2 :
+        temp_res2 = ctx.corpus_vec.search(self.corpus_id, clue)
+        for score, doc_entity, start_index, end_index in temp_res2:
 
             # Verify that the text recovered from the vectors fits the maximum sentence criteria
-            if end_index - start_index != len(doc_entity.document) :
+            if end_index - start_index != len(doc_entity.document):
                 print("Sanity check, this case should never get triggered")
                 raise SentenceLengthOverflowException(end_index - start_index)
 
-            citation = ctx.corpus_metadata.get_document_citation(self.corpus_ID, doc_entity.document_id)
+            citation = ctx.corpus_metadata.get_document_citation(self.corpus_id, doc_entity.document_id)
 
             vec_store_results.append([score, doc_entity.document, citation])
 
@@ -78,13 +78,11 @@ class BasicCorpus(Corpus) :
 
         return results
 
-
     def generate_search_instructions(self, clue: str) -> any:
         pass
 
 
-
-def normalize_and_combine(doc_results : list, vec_results : list) :
+def normalize_and_combine(doc_results: list, vec_results: list):
     # normalization with assumption that top score matches are approximately equal
 
     # Vec scores are based on distance, so smaller is better. Need to inverse the
@@ -99,9 +97,11 @@ def normalize_and_combine(doc_results : list, vec_results : list) :
     vec_max_score = max(vec_scores)
     vec_min_score = min(vec_scores)
 
-    # Normalize and shift all results to be between 0 and 1, with 1 being best responses and 0 being worst  
-    doc_results_normalized = [[(x - doc_min_score) / (doc_max_score - doc_min_score) ,y,z] for [x,y,z] in doc_results]
-    vec_results_normalized = [[(vec_max_score - x) / (vec_max_score - vec_min_score),y,z] for [x,y,z] in vec_results]
+    # Normalize and shift all results to be between 0 and 1, with 1 being best responses and 0 being worst
+    doc_results_normalized = [[(x - doc_min_score) / (doc_max_score - doc_min_score), y, z]
+                              for [x, y, z] in doc_results]
+    vec_results_normalized = [[(vec_max_score - x) / (vec_max_score - vec_min_score), y, z]
+                              for [x, y, z] in vec_results]
 
     # Remove duplicates and merge
     # TODO : replace this with a way to preserve and reward good scoring
@@ -118,16 +118,16 @@ def normalize_and_combine(doc_results : list, vec_results : list) :
 
     duplicate_vec_indicies = []
     doc_index = 0
-    for doc_score, doc_text, doc_citation in doc_results_normalized : 
+    for doc_score, doc_text, doc_citation in doc_results_normalized:
         vec_index = 0
-        
-        for vec_score, vec_text, vec_citation in vec_results_normalized : 
-            if(vec_text in doc_text) :
+
+        for vec_score, vec_text, vec_citation in vec_results_normalized:
+            if (vec_text in doc_text):
                 duplicate_vec_indicies.append(vec_index)
                 doc_score = doc_score + vec_score
             vec_index = vec_index + 1
 
-        doc_results_normalized[doc_index][0] = doc_score 
+        doc_results_normalized[doc_index][0] = doc_score
         doc_index = doc_index + 1
 
     unique_vectors = [i for j, i in enumerate(vec_results_normalized) if j not in duplicate_vec_indicies]
@@ -137,11 +137,11 @@ def normalize_and_combine(doc_results : list, vec_results : list) :
     # Sort by descending scoring so best results come first
     doc_results_normalized.sort(key=lambda x: x[0], reverse=True)
 
-    #print("When normalized merged and sorted the results are : ")
-    #print(doc_results_normalized)
+    # print("When normalized merged and sorted the results are : ")
+    # print(doc_results_normalized)
 
     # Cutoff by maximum character limits
 
-    results = [(y,z) for [x,y,z] in doc_results_normalized]
-    # Once scores are of same magnitude 
+    results = [(y, z) for [x, y, z] in doc_results_normalized]
+    # Once scores are of same magnitude
     return results

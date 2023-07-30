@@ -10,6 +10,7 @@ from memas.interface.corpus import Citation
 corpus_name = "test corpus1"
 test_corpus = basic_corpus.BasicCorpus(uuid.uuid4(), corpus_name)
 
+
 def test_save_then_search_one_corpus(es_client):
     text1 = "The sun is high. California sunshine is great. "
     text2 = "I picked up my phone and then dropped it again. I cant seem to get a good grip on things these days. It persists into my everyday tasks"
@@ -25,6 +26,4 @@ def test_save_then_search_one_corpus(es_client):
     print(output)
     assert "sunshine" in output[0][0]
     assert "weather" in output[1][0]
-
-
-
+    assert False

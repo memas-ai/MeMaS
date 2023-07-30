@@ -67,7 +67,7 @@ class CorpusDocumentMetadataStoreImpl(CorpusDocumentMetadataStore):
                         source_name=result.source_name,
                         corpus_name=result.corpus_name,
                         description=result.description)
-    
+
     def get_document_segment_count(self, corpus_id: UUID, document_id: UUID) -> int:
         """Retrieves the number of segments a stored document was split into 
 
@@ -79,7 +79,7 @@ class CorpusDocumentMetadataStoreImpl(CorpusDocumentMetadataStore):
             int: the number of segments the document is broken into
         """
         return DocumentMetadata.get(corpus_id=corpus_id, document_id=document_id).segment_count
-    
+
     def get_document_segment_count(self, corpus_id: UUID, document_id: UUID) -> int:
         """Retrieves the number of segments a stored document was split into 
 
@@ -90,5 +90,6 @@ class CorpusDocumentMetadataStoreImpl(CorpusDocumentMetadataStore):
         Returns:
             int: the number of segments the document is broken into
         """
+
 
 SINGLETON: CorpusDocumentMetadataStore = CorpusDocumentMetadataStoreImpl()
