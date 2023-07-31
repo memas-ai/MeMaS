@@ -19,9 +19,9 @@ def test_document_segmentation():
     bools = [regexp.search((x.strip())[-1:]) for x in segments2]
     print(bools)
     print(segments2)
-    for x in bools :
+    for x in bools:
         assert x
-    assert(len(bools) >= len(doc2) / max_seg_size)
+    assert (len(bools) >= len(doc2) / max_seg_size)
 
     # Test3: Strings that are not easily divided by sentence markers respect word boundaries.
     doc3 = "There is a total of no sentence division points expected in this text, That is intended Anything more or less is bad, but I need to have sentence boundaries respected, Who doesn't like respect after all"
@@ -32,23 +32,23 @@ def test_document_segmentation():
     print(words)
     # Every word should appear intact in one of the segments
     word_list = ""
-    for segment in segments :
+    for segment in segments:
         word_list = word_list + segment
 
     print("wordList is :")
     print(word_list)
 
-    for word in words :
-        if word not in word_list : 
+    for word in words:
+        if word not in word_list:
             print("about to print WRODS")
             print(word)
             assert False
 
     # Test that there are not too few segments
-    assert(len(segments) >= len(doc3) / max_seg_size)
+    assert (len(segments) >= len(doc3) / max_seg_size)
     # Test that individual segments are not too long
-    for segment in segments :
-        assert(len(segment) <= max_seg_size)
+    for segment in segments:
+        assert (len(segment) <= max_seg_size)
 
     # Test that in the worst case a word gets divided anyway
     doc4 = "asdasdoijwernwernaidsaodiajsdoiajsodijaosdijasoidjaosidjoasidja After this, text works. No need to fret."
@@ -57,11 +57,9 @@ def test_document_segmentation():
     print("Segments of badly formatted text are  :")
     print(segments)
     # Test that there are not too few segments
-    assert(len(segments) >= len(doc4) / max_seg_size)
+    assert (len(segments) >= len(doc4) / max_seg_size)
     # Test that individual segments are not too long
-    for segment in segments :
-        assert(len(segment) <= max_seg_size)
+    for segment in segments:
+        assert (len(segment) <= max_seg_size)
     # Test that long malformed text splits included all characters
     assert segments[0] + segments[1] + segments[2] == doc4.split(" ")[0]
-
-test_document_segmentation()

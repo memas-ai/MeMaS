@@ -54,6 +54,8 @@ class ESDocumentStore(CorpusDocumentStore):
         return response['result'] == 'created'
 
     def search_corpus(self, corpus_id: UUID, clue: str) -> list[tuple[float, DocumentEntity]]:
+        # TODO: Need to look into how many documents to return
+        max_retrieved = 20
         search_query = {
             "bool": {
                 "must": [
@@ -64,7 +66,7 @@ class ESDocumentStore(CorpusDocumentStore):
                 ]
             }
         }
-        response = self.es.search(index=self.es_index, query=search_query)
+        response = self.es.search(index=self.es_index, query=search_query, size=max_retrieved)
 
         result = []
         for hit in response["hits"]["hits"]:

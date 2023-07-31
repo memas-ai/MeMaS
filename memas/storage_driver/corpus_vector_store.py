@@ -99,8 +99,9 @@ class MilvusUSESentenceVectorStore(CorpusVectorStore):
         self.encoder.init()
 
     def search(self, corpus_id: uuid.UUID, clue: str) -> list[tuple[float, DocumentEntity, int, int]]:
+        vec_search_count = 100
         result = self.collection.search(self.encoder.embed([clue]).tolist(), EMBEDDING_FIELD, param={},
-                                        limit=10, expr=f"{CORPUS_FIELD} == \"{corpus_id.hex}\"",
+                                        limit=vec_search_count, expr=f"{CORPUS_FIELD} == \"{corpus_id.hex}\"",
                                         output_fields=[CORPUS_FIELD, START_FIELD, END_FIELD, DOCUMENT_NAME, TEXT_PREVIEW])
         output = []
         for hits in result:
@@ -113,7 +114,7 @@ class MilvusUSESentenceVectorStore(CorpusVectorStore):
         return output
 
     def save_document(self, doc_entity: DocumentEntity) -> bool:
-        sentences = self.split_doc(doc_entity.document)
+        sentences = split_doc(doc_entity.document)
         objects: list[USESentenceObject] = []
 
         start = 0
@@ -130,20 +131,29 @@ class MilvusUSESentenceVectorStore(CorpusVectorStore):
         insert_count = self.collection.insert(convert_batch(objects)).insert_count
 
         return insert_count == len(sentences)
-    
 
-def split_doc(document: str, max_text_len = MAX_TEXT_LENGTH) -> list[str]:
+
+def split_doc(document: str, max_text_len=MAX_TEXT_LENGTH) -> list[str]:
     # Divide on sentence borders while keeping punctuation and remove additional white space
-    first_split = [x.strip() for x in list(filter(lambda x: x != "", re.split(r'([\.?!]+\s*)', document)))]
+    first_split = re.split(r'([\.?!]+\s*)', document)
 
-    # TODO Add punctuation back 
-    
+    # Add punctuation back by pairing the splitting text with previous segment
+    second_split = []
+    i = 0
+    while i < len(first_split) - 1:
+        second_split.append(first_split[i] + first_split[i + 1])
+        i = i + 2
+    # Last point needs to be manually added since it has no splitter after it
+    second_split.append(first_split[-1])
 
+    reformed_sentences = [x.strip() for x in list(filter(lambda x: x != "", second_split))]
+    print("reformed sentences: ")
+    print(reformed_sentences)
     final_sentences = []
-    # Any "sentence" longer than 1024 characters gets split further. Splits are attempted
+    # Any "sentence" longer than max_text_len characters gets split further. Splits are attempted
     # at word boundaries. Words longer than word_search_size that lie exactly on the boundary of a segment
     # are not guaranteed to be unsplit. Input is too malformed at that point, so just split whereever.
-    for segment in first_split:
+    for segment in reformed_sentences:
         if (len(segment) < max_text_len):
             final_sentences.append(segment)
         else:
@@ -154,7 +164,7 @@ def split_doc(document: str, max_text_len = MAX_TEXT_LENGTH) -> list[str]:
             while segment_index < len(segment) - max_text_len:
                 end_index = segment_index + max_text_len
                 space_index_end = segment.find(" ", max(0, end_index - word_search_size),
-                                                min(end_index, len(segment)))
+                                               min(end_index, len(segment)))
 
                 # If a word boundary at end is found reassign index to accomodate.
                 if space_index_end > 0:
@@ -165,9 +175,9 @@ def split_doc(document: str, max_text_len = MAX_TEXT_LENGTH) -> list[str]:
                 segment_index = end_index
 
             # Case 2: Find boundary for last sentence.
-            final_segment_start_index = len(segment) - max_text_len
+            final_segment_start_index = min(len(segment), len(segment) - max_text_len + word_search_size)
             last_chunk_space_index = segment.find(" ", max(0, final_segment_start_index - word_search_size),
-                                                    min(final_segment_start_index, len(segment)))
+                                                  final_segment_start_index)
 
             if last_chunk_space_index > 0:
                 final_segment_start_index = last_chunk_space_index

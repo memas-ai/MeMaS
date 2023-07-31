@@ -26,4 +26,3 @@ def test_save_then_search_one_corpus(es_client):
     print(output)
     assert "sunshine" in output[0][0]
     assert "weather" in output[1][0]
-    assert False

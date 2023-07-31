@@ -32,9 +32,9 @@ def segment_document(document: str, max_characters_per_chunk: int, word_search_s
                 else:
                     end_index = word_chunk.find(" ", max(0, start_index + max(0, max_characters_per_chunk - word_search_size)),
                                                 min(start_index + max_characters_per_chunk, len(word_chunk)))
-                    
+
                     # If there is no word boundary, split word
-                    if(end_index < 0) :
+                    if (end_index < 0):
                         end_index = start_index + max_characters_per_chunk
 
                     end_index_offset = end_index - start_index
