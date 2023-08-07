@@ -1,7 +1,7 @@
 # from search_redirect import SearchSettings
 import uuid
 from functools import reduce
-from memas.interface.corpus import Corpus
+from memas.interface.corpus import Corpus, CorpusFactory
 from memas.interface.corpus import Citation
 from memas.interface.storage_driver import DocumentEntity
 from memas.interface.exceptions import SentenceLengthOverflowException
@@ -45,12 +45,12 @@ class BasicCorpus(Corpus):
     via ANN. Combines the result via a simple concatenation.
     """
 
-    def search(self, clue: str) -> list[tuple[str, Citation]]:
+    def search(self, clue: str) -> list[tuple[float, str, Citation]]:
         # TODO : Replace the fields that constrain and describe the search with a SearchSettings Object
         # that can be passed in
         vector_search_count: int = 10
 
-        doc_store_results: list[tuple[str, Citation]] = []
+        doc_store_results: list[tuple[float, str, Citation]] = []
         temp_res = ctx.corpus_doc.search_corpus(self.corpus_id, clue)
         # Search the document store
         for score, doc_entity in temp_res:
@@ -60,7 +60,7 @@ class BasicCorpus(Corpus):
             doc_store_results.append([score, document_text, citation])
 
         # Search for the vectors
-        vec_store_results: list[tuple[str, Citation]] = []
+        vec_store_results: list[tuple[float, str, Citation]] = []
         temp_res2 = ctx.corpus_vec.search(self.corpus_id, clue)
         for score, doc_entity, start_index, end_index in temp_res2:
 
@@ -73,8 +73,20 @@ class BasicCorpus(Corpus):
 
             vec_store_results.append([score, doc_entity.document, citation])
 
-        # Combine the results and remove duplicates
-        results = normalize_and_combine(doc_store_results, vec_store_results)
+        # print("Docs then Vecs : ")
+        # print(doc_store_results)
+        # print(vec_store_results)
+
+        # If any of the searches returned no results combine and return
+        if len(vec_store_results) == 0 :
+            doc_store_results.sort(key=lambda x: x[0], reverse=True)
+            results = [(y,z) for [x,y,z] in doc_store_results]
+        elif len(doc_store_results) == 0 :
+            vec_store_results.sort(key=lambda x: x[0], reverse=False)
+            results = [(y,z) for [x,y,z] in vec_store_results]
+        else :
+            # Combine the results and remove duplicates
+            results = normalize_and_combine(doc_store_results, vec_store_results)
 
         return results
 
@@ -86,8 +98,7 @@ def normalize_and_combine(doc_results: list, vec_results: list):
     # normalization with assumption that top score matches are approximately equal
 
     # Vec scores are based on distance, so smaller is better. Need to inverse the
-    # order to be comparable to something like elastic search where bigger is better
-    # Multiply by -1 and add by Max of the list.
+    # order to be comparable to something like elastic search where bigger is better.
     doc_scores = ([x[0] for x in doc_results])
     vec_scores = ([x[0] for x in vec_results])
 
@@ -97,16 +108,20 @@ def normalize_and_combine(doc_results: list, vec_results: list):
     vec_max_score = max(vec_scores)
     vec_min_score = min(vec_scores)
 
-    # Normalize and shift all results to be between 0 and 1, with 1 being best responses and 0 being worst
-    doc_results_normalized = [[(x - doc_min_score) / (doc_max_score - doc_min_score), y, z]
+    doc_results_normalized = []
+    vec_results_normalized = []
+
+    # Normalize and shift doc results to be between 0 and 1, with 1 being best responses and 0 being worst
+    if(doc_max_score != doc_min_score) :
+        doc_results_normalized = [[(x - doc_min_score) / (doc_max_score - doc_min_score), y, z]
                               for [x, y, z] in doc_results]
-    vec_results_normalized = [[(vec_max_score - x) / (vec_max_score - vec_min_score), y, z]
-                              for [x, y, z] in vec_results]
+        
+    # Vector results assume L2 distance of unit vectors so the range is between 0 and 2.    
+    # if(vec_max_score != vec_min_score) : 
+        # vec_results_normalized = [[(vec_max_score - x) / (vec_max_score - vec_min_score), y, z]
+        #                       for [x, y, z] in vec_results]
+    vec_results_normalized = [[2 - x, y, z] for [x, y, z] in vec_results]
 
-    # Remove duplicates and merge
-    # TODO : replace this with a way to preserve and reward good scoring
-
-    # TODO: This rewards longer documents since they are m
     # Reward documents that contain high scoring vectors and remove the searched vector.
 
     # TODO : Check that this isn't super slow for larger documents and more search results
@@ -137,11 +152,13 @@ def normalize_and_combine(doc_results: list, vec_results: list):
     # Sort by descending scoring so best results come first
     doc_results_normalized.sort(key=lambda x: x[0], reverse=True)
 
-    # print("When normalized merged and sorted the results are : ")
-    # print(doc_results_normalized)
+    return doc_results_normalized
 
-    # Cutoff by maximum character limits
 
-    results = [(y, z) for [x, y, z] in doc_results_normalized]
-    # Once scores are of same magnitude
-    return results
+class BasicCorpusFactory(CorpusFactory):
+    def produce(self, corpus_id: uuid.UUID):
+        # TODO: Maybe change the Corpus Name Parameter
+        return BasicCorpus(corpus_id, "BasicCorpus")
+    
+
+

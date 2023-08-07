@@ -6,7 +6,12 @@ class CorpusProvider:
     def __init__(self) -> None:
         self.factory_dict: dict[CorpusType, CorpusFactory] = dict()
 
-    def get_corpus(self, corpus_id: UUID, *, corpus_type: CorpusType, namespace_id: UUID) -> Corpus:
+    def setCorpusFactory(self, corpus_type : CorpusType, corpus_factory : CorpusFactory) :
+        self.factory_dict[corpus_type] = corpus_factory
+
+
+    # TODO : Fix the last parameter that was just removed - what is that supposed to be for? namespace_id
+    def get_corpus(self, corpus_id: UUID, *, corpus_type: CorpusType) -> Corpus:
         """Gets the Corpus class based on the corpus_id
 
         Args:
@@ -18,3 +23,4 @@ class CorpusProvider:
             Corpus: _description_
         """
         return self.factory_dict[corpus_type].produce(corpus_id)
+

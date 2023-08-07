@@ -1,6 +1,8 @@
 from flask import Blueprint, request
 from memas.context_manager import ctx
-from memas.interface.corpus import Citation, Corpus
+from memas.interface.corpus import Citation, Corpus, CorpusType
+from memas.storage_driver.memas_metadata import split_corpus_pathname
+from memas.corpus.basic_corpus import BasicCorpusFactory
 
 dataplane = Blueprint("dp", __name__, url_prefix="/dp")
 
@@ -13,22 +15,33 @@ def recall():
     search_results = []
     for corpus_id in corpus_ids:
         # TODO: either provide corpus_type or namespace_pathname
-        corpus: Corpus = ctx.corpus_provider.get_corpus(corpus_id)
-        # TODO: do we just combine multi corpus search results like this?
+        corpus: Corpus = ctx.corpus_provider.get_corpus(corpus_id, corpus_type=CorpusType.KNOWLEDGE)
         search_results.extend(corpus.search(clue=clue))
-    return search_results
+
+    # Combine the results and only take the top ones
+    search_results.sort(key=lambda x: x[0], reverse = True)
+
+    # Take only top few scores and remove scoring element before sending
+    return [[y,z] for x,y,z in search_results[0:3]]
 
 
 @dataplane.route('/remember', methods=["POST"])
 def remember():
+    # TODO : Need a better place to put this
+    # ctx.corpus_provider.setCorpusFactory(CorpusType.KNOWLEDGE, BasicCorpusFactory())
+    # ctx.corpus_provider.setCorpusFactory(CorpusType.CONVERSATION, BasicCorpusFactory())
+
     corpus_pathname: str = request.json["corpus_pathname"]
     document: str = request.json["document"]
+    document_name: str = request.json["document_name"]
 
+    # TODO : need to be able to fetch the corpus name for citation purposes
+    corpus_name = split_corpus_pathname(corpus_pathname)[1]
     raw_citation: str = request.json["citation"]
-    citation = Citation(raw_citation["source_uri"], raw_citation["source_name"], raw_citation["description"])
+    citation = Citation(raw_citation["source_uri"], raw_citation["source_name"], corpus_name, raw_citation["description"])
 
     corpus_info = ctx.memas_metadata.get_corpus_info(corpus_pathname)
 
     corpus: Corpus = ctx.corpus_provider.get_corpus(corpus_info.corpus_id, corpus_type=corpus_info.corpus_type)
-    corpus.store_and_index(document, citation)
+    corpus.store_and_index(document, document_name, citation)
     return {"success": True}

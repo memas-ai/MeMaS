@@ -46,7 +46,7 @@ class Corpus(ABC):
         """
 
     @abstractmethod
-    def search(self, clue: str) -> list[tuple[str, Citation]]:
+    def search(self, clue: str) -> list[tuple[float, str, Citation]]:
         """Search for (document,citation) pairs related to the clue
 
         Args:
@@ -68,8 +68,9 @@ class Corpus(ABC):
         """
 
 
-class CorpusFactory(ABC):
+class   CorpusFactory(ABC):
     @abstractmethod
     def produce(self, corpus_id: UUID):
         # FIXME: do we want to pass in any arguments?
         pass
+

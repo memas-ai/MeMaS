@@ -12,6 +12,7 @@ from pymilvus import (
 )
 from memas.encoder.universal_sentence_encoder import USE_VECTOR_DIMENSION, USETextEncoder
 from memas.interface.storage_driver import CorpusVectorStore, DocumentEntity
+from nltk.tokenize import sent_tokenize
 
 
 USE_COLLECTION_NAME = "corpus_USE_sentence_store"
@@ -109,8 +110,6 @@ class MilvusUSESentenceVectorStore(CorpusVectorStore):
                 doc_entity = DocumentEntity(uuid.UUID(hit.entity.corpus_id), uuid.UUID(
                     hit.id[:32]), hit.entity.document_name, hit.entity.text_preview)
                 output.append((hit.distance, doc_entity, hit.entity.start_index, hit.entity.end_index))
-        print("vec empty check ")
-        print(self.collection.is_empty)
         return output
 
     def save_document(self, doc_entity: DocumentEntity) -> bool:
@@ -134,26 +133,14 @@ class MilvusUSESentenceVectorStore(CorpusVectorStore):
 
 
 def split_doc(document: str, max_text_len=MAX_TEXT_LENGTH) -> list[str]:
-    # Divide on sentence borders while keeping punctuation and remove additional white space
-    first_split = re.split(r'([\.?!]+\s*)', document)
+    # Divide into sentences
+    first_split = sent_tokenize(document)
 
-    # Add punctuation back by pairing the splitting text with previous segment
-    second_split = []
-    i = 0
-    while i < len(first_split) - 1:
-        second_split.append(first_split[i] + first_split[i + 1])
-        i = i + 2
-    # Last point needs to be manually added since it has no splitter after it
-    second_split.append(first_split[-1])
-
-    reformed_sentences = [x.strip() for x in list(filter(lambda x: x != "", second_split))]
-    print("reformed sentences: ")
-    print(reformed_sentences)
     final_sentences = []
     # Any "sentence" longer than max_text_len characters gets split further. Splits are attempted
     # at word boundaries. Words longer than word_search_size that lie exactly on the boundary of a segment
     # are not guaranteed to be unsplit. Input is too malformed at that point, so just split whereever.
-    for segment in reformed_sentences:
+    for segment in first_split:
         if (len(segment) < max_text_len):
             final_sentences.append(segment)
         else:

@@ -16,6 +16,7 @@ source .venv/bin/activate
 pip install -r requirements.txt
 
 pip install -r test-requirements.txt
+python -c "import nltk; nltk.download('punkt')"
 
 # sysctl -w vm.max_map_count=262144
 
