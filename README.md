@@ -32,4 +32,16 @@ to start the memas server
 ### Running Integration Tests
 After `source setup-env.sh` and `docker compose up`, wait till the services are fully started.
 
-Then run `python3 -m pytest integration-tests`
+Then run 
+```
+python3 -m pytest integration-tests
+```
+
+## Benchmarking
+For running benchmarking, you need to first create an OpenAI API Key. This is a good [tutorial](https://www.geeksforgeeks.org/how-to-use-chatgpt-api-in-python/).
+
+Then after having a running instance of memas, run
+
+```
+export OPENAI_API_KEY=your_api_key; python3 -m benchmarking
+```

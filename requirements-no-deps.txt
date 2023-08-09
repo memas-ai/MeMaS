@@ -1,0 +1,4 @@
+# This is needed to resolve a bug with apache beam + datasets
+# Read https://github.com/huggingface/datasets/issues/5613 for more details
+multiprocess==0.70.11
+dill==0.3.6

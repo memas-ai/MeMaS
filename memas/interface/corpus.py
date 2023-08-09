@@ -68,9 +68,8 @@ class Corpus(ABC):
         """
 
 
-class   CorpusFactory(ABC):
+class CorpusFactory(ABC):
     @abstractmethod
     def produce(self, corpus_id: UUID):
         # FIXME: do we want to pass in any arguments?
         pass
-

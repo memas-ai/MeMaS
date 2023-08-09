@@ -10,8 +10,8 @@ class DocumentMetadata(Model):
     corpus_id = columns.UUID(partition_key=True)
     document_id = columns.UUID(primary_key=True)
 
-    document_name = columns.Text(required=True)
-    source_name = columns.Text(required=True)
+    document_name = columns.Text()
+    source_name = columns.Text()
     source_uri = columns.Text()
     corpus_name = columns.Text()
     description = columns.Text()

@@ -14,9 +14,11 @@ fi
 
 source .venv/bin/activate
 pip install -r requirements.txt
+# TODO: remove this after package split or after beam/datasets package upgrade 
+pip install --no-deps -r requirements-no-deps.txt
 
 pip install -r test-requirements.txt
-python -c "import nltk; nltk.download('punkt')"
+python3 -c "import nltk; nltk.download('punkt')"
 
 # sysctl -w vm.max_map_count=262144
 
@@ -25,4 +27,4 @@ set -a
 source .env
 set +a
 
-export PYTHONPATH=memas
+export PYTHONPATH=memas:memas_client:memas_sdk
