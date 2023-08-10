@@ -27,4 +27,4 @@ set -a
 source .env
 set +a
 
-export PYTHONPATH=memas:memas_client:memas_sdk
+export PYTHONPATH=$PYTHONPATH:memas:memas_client:memas_sdk
