@@ -1,5 +1,6 @@
 import os
 from dataclasses import dataclass
+import logging
 from werkzeug.local import LocalProxy
 from flask import current_app, Config
 from cassandra.cluster import Cluster, Session
@@ -10,6 +11,9 @@ from memas.interface.exceptions import NotProperlyInitializedException
 from memas.interface.storage_driver import CorpusDocumentMetadataStore, CorpusDocumentStore, CorpusVectorStore, MemasMetadataStore
 from memas.storage_driver import corpus_doc_metadata, corpus_doc_store, corpus_vector_store, memas_metadata
 from memas.corpus.corpus_provider import CorpusProvider
+
+
+_log = logging.getLogger(__name__)
 
 
 def read_env(name: str, default: str = None) -> str:

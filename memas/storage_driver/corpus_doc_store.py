@@ -1,7 +1,11 @@
+import logging
 from typing import Final
 from uuid import UUID
 from elasticsearch import Elasticsearch
 from memas.interface.storage_driver import CorpusDocumentStore, DocumentEntity
+
+
+_log = logging.getLogger(__name__)
 
 
 CORPUS_INDEX: Final[str] = "memas-documents"
@@ -44,6 +48,8 @@ class ESDocumentStore(CorpusDocumentStore):
         return response["acknowledged"]
 
     def save_document(self, chunk_id: str, doc_entity: DocumentEntity) -> bool:
+        _log.debug(f"Saving document for [corpus_id={doc_entity.corpus_id}] [chunk_id={chunk_id}]")
+
         doc = {
             CORPUS_FIELD: doc_entity.corpus_id.hex,
             NAME_FIELD: doc_entity.document_name,
@@ -54,6 +60,8 @@ class ESDocumentStore(CorpusDocumentStore):
         return response['result'] == 'created'
 
     def search_corpus(self, corpus_id: UUID, clue: str) -> list[tuple[float, DocumentEntity]]:
+        _log.debug(f"Searching documents for [corpus_id={corpus_id}]")
+
         # TODO: Need to look into how many documents to return
         max_retrieved = 20
         search_query = {
