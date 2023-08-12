@@ -1,5 +1,9 @@
+import logging
 from uuid import UUID
 from memas.interface.corpus import Corpus, CorpusFactory, CorpusType
+
+
+_log = logging.getLogger(__name__)
 
 
 class CorpusProvider:

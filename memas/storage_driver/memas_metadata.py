@@ -1,6 +1,7 @@
+from datetime import datetime
+import logging
 from typing import Final
 import uuid
-from datetime import datetime
 from cassandra.cqlengine import columns, management
 from cassandra.cqlengine.models import Model
 from cassandra.cqlengine.query import BatchQuery, LWTException
@@ -9,6 +10,9 @@ from memas.interface.corpus import CorpusType
 from memas.interface.exceptions import BadArgumentException, IllegalNameException, NamespaceExistsException
 from memas.interface.namespace import ROOT_ID, ROOT_NAME, NAMESPACE_SEPARATOR, CORPUS_SEPARATOR, is_pathname_format_valid, is_name_format_valid
 from memas.interface.storage_driver import MemasMetadataStore
+
+
+_log = logging.getLogger(__name__)
 
 
 MAX_PATH_LENGTH: Final[int] = 256
@@ -131,6 +135,8 @@ class MemasMetadataStoreImpl(MemasMetadataStore):
         return (parent_result.id, child_result.id)
 
     def create_namespace(self, namespace_pathname: str, *, parent_id: uuid.UUID = None) -> uuid.UUID:
+        _log.debug(f"Creating namespace for [namespace_pathname=\"{namespace_pathname}\"]")
+
         if namespace_pathname == ROOT_NAME:
             raise BadArgumentException("\"\" is reserved for the root namespace!")
         if not is_pathname_format_valid(namespace_pathname):
@@ -144,8 +150,9 @@ class MemasMetadataStoreImpl(MemasMetadataStore):
         now = datetime.now()
         try:
             NamespaceNameToId.if_not_exists().create(fullname=namespace_pathname, id=namespace_id)
-        except LWTException as ignored:
-            raise NamespaceExistsException(namespace_pathname) from ignored
+        except LWTException as e:
+            _log.info(f"Namespace already exists [namespace_pathname=\"{namespace_pathname}\"]")
+            raise NamespaceExistsException(namespace_pathname) from e
 
         # FIXME: Currently we don't handle the possibility of namespace ids colliding.
         #   On one hand this probability is extremely low; in our current state we don't expect
@@ -161,6 +168,8 @@ class MemasMetadataStoreImpl(MemasMetadataStore):
         return namespace_id
 
     def create_corpus(self, corpus_pathname: str, corpus_type: CorpusType, permissions: int, *, parent_id: uuid.UUID = None) -> uuid.UUID:
+        _log.debug(f"Creating corpus for [corpus_pathname=\"{corpus_pathname}\"] [corpus_type={corpus_type}]")
+
         parent_pathname, corpus_name = split_corpus_pathname(corpus_pathname)
         if not is_pathname_format_valid(parent_pathname) or not is_name_format_valid(corpus_name):
             raise IllegalNameException(corpus_pathname)
@@ -172,8 +181,9 @@ class MemasMetadataStoreImpl(MemasMetadataStore):
         now = datetime.now()
         try:
             NamespaceNameToId.if_not_exists().create(fullname=corpus_pathname, id=corpus_id)
-        except LWTException as ignored:
-            raise NamespaceExistsException(corpus_pathname) from ignored
+        except LWTException as e:
+            _log.info(f"Corpus already exists [corpus_pathname=\"{corpus_pathname}\"]")
+            raise NamespaceExistsException(corpus_pathname) from e
 
         # FIXME: Same issue with namespace id colliding.
         with BatchQuery() as batch_query:

@@ -22,7 +22,7 @@ def test_save_then_search_one_corpus(es_client):
 
     time.sleep(1)
     output = test_corpus.search("It is sunny")
-    print("OUTPUT IS : ")
-    print(output)
-    assert "sunshine" in output[0][0]
-    assert "weather" in output[1][0]
+    # print("OUTPUT IS : ")
+    # print(output)
+    assert "sunshine" in output[0][1]
+    assert "weather" in output[1][1]

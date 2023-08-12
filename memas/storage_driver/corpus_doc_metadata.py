@@ -1,9 +1,13 @@
 from datetime import datetime
+import logging
 from uuid import UUID
 from cassandra.cqlengine import columns, management
 from cassandra.cqlengine.models import Model
 from memas.interface.corpus import Citation
 from memas.interface.storage_driver import CorpusDocumentMetadataStore
+
+
+_log = logging.getLogger(__name__)
 
 
 class DocumentMetadata(Model):
@@ -39,6 +43,7 @@ class CorpusDocumentMetadataStoreImpl(CorpusDocumentMetadataStore):
         Returns:
             bool: success or not
         """
+        _log.debug(f"Inserting document metadata for [corpus_id={corpus_id.hex}] [document_id={document_id.hex}]")
 
         DocumentMetadata.create(corpus_id=corpus_id,
                                 document_id=document_id,
@@ -61,6 +66,7 @@ class CorpusDocumentMetadataStoreImpl(CorpusDocumentMetadataStore):
         Returns:
             Citation: Citation object of the document
         """
+        _log.debug(f"Retrieving document citation for [corpus_id={corpus_id.hex}] [document_id={document_id.hex}]")
         result = DocumentMetadata.get(
             corpus_id=corpus_id, document_id=document_id)
         return Citation(source_uri=result.source_uri,
@@ -78,18 +84,8 @@ class CorpusDocumentMetadataStoreImpl(CorpusDocumentMetadataStore):
         Returns:
             int: the number of segments the document is broken into
         """
+        _log.debug(f"Retrieving document segment count for [corpus_id={corpus_id.hex}] [document_id={document_id.hex}]")
         return DocumentMetadata.get(corpus_id=corpus_id, document_id=document_id).segment_count
-
-    def get_document_segment_count(self, corpus_id: UUID, document_id: UUID) -> int:
-        """Retrieves the number of segments a stored document was split into 
-
-        Args:
-            corpus_id (UUID): corpus id
-            document_id (UUID): document id
-
-        Returns:
-            int: the number of segments the document is broken into
-        """
 
 
 SINGLETON: CorpusDocumentMetadataStore = CorpusDocumentMetadataStoreImpl()

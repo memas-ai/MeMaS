@@ -1,4 +1,5 @@
 # from search_redirect import SearchSettings
+import logging
 import uuid
 from functools import reduce
 from memas.interface.corpus import Corpus, CorpusFactory
@@ -7,6 +8,10 @@ from memas.interface.storage_driver import DocumentEntity
 from memas.interface.exceptions import SentenceLengthOverflowException
 from memas.context_manager import ctx
 from memas.corpus.corpus_helpers import segment_document
+
+
+_log = logging.getLogger(__name__)
+
 
 MAX_SEGMENT_LENGTH = 1536
 
@@ -22,6 +27,8 @@ class BasicCorpus(Corpus):
     """
 
     def store_and_index(self, document: str, document_name: str, citation: Citation) -> bool:
+        _log.debug(f"Corpus storing and indexing [corpus_id={self.corpus_id}]")
+
         doc_id = uuid.uuid4()
         doc_entity = DocumentEntity(self.corpus_id, doc_id, document_name, document)
 
@@ -46,6 +53,8 @@ class BasicCorpus(Corpus):
     """
 
     def search(self, clue: str) -> list[tuple[float, str, Citation]]:
+        _log.debug(f"Corpus searching [corpus_id={self.corpus_id}]")
+
         # TODO : Replace the fields that constrain and describe the search with a SearchSettings Object
         # that can be passed in
         vector_search_count: int = 10
@@ -66,7 +75,7 @@ class BasicCorpus(Corpus):
 
             # Verify that the text recovered from the vectors fits the maximum sentence criteria
             if end_index - start_index != len(doc_entity.document):
-                print("Sanity check, this case should never get triggered")
+                _log.error("Index not aligned with actual document", exc_info=True)
                 raise SentenceLengthOverflowException(end_index - start_index)
 
             citation = ctx.corpus_metadata.get_document_citation(self.corpus_id, doc_entity.document_id)

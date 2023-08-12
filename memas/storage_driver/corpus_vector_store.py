@@ -1,8 +1,9 @@
-import uuid
 from dataclasses import dataclass
+import logging
 import numpy as np
 import re
 import time
+import uuid
 from pymilvus import (
     connections,
     FieldSchema,
@@ -13,6 +14,9 @@ from pymilvus import (
 from memas.encoder.universal_sentence_encoder import USE_VECTOR_DIMENSION, USETextEncoder
 from memas.interface.storage_driver import CorpusVectorStore, DocumentEntity
 from nltk.tokenize import sent_tokenize
+
+
+_log = logging.getLogger(__name__)
 
 
 USE_COLLECTION_NAME = "corpus_USE_sentence_store"
@@ -100,6 +104,8 @@ class MilvusUSESentenceVectorStore(CorpusVectorStore):
         self.encoder.init()
 
     def search(self, corpus_id: uuid.UUID, clue: str) -> list[tuple[float, DocumentEntity, int, int]]:
+        _log.debug(f"Searching vectors for [corpus_id={corpus_id}]")
+
         vec_search_count = 100
         result = self.collection.search(self.encoder.embed([clue]).tolist(), EMBEDDING_FIELD, param={},
                                         limit=vec_search_count, expr=f"{CORPUS_FIELD} == \"{corpus_id.hex}\"",
@@ -113,6 +119,8 @@ class MilvusUSESentenceVectorStore(CorpusVectorStore):
         return output
 
     def save_document(self, doc_entity: DocumentEntity) -> bool:
+        _log.debug(f"Saving vectors for [corpus_id={doc_entity.corpus_id}]")
+
         sentences = split_doc(doc_entity.document)
         objects: list[USESentenceObject] = []
 

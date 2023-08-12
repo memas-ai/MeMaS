@@ -25,4 +25,6 @@ def create_app(config_filename, *, first_init=False):
     app.register_blueprint(dataplane)
     app.register_blueprint(controlplane)
 
+    app.logger.info("Finished initialization")
+
     return app
