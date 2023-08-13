@@ -29,6 +29,12 @@ flask --app 'memas.app:create_app(config_filename="memas-config.yml")' run
 ``` 
 to start the memas server
 
+To run the app with wsgi server, run
+```
+gunicorn -w 1 -k eventlet 'memas.app:create_app(config_filename="memas-config.yml")'
+```
+note `-w` sets the number of worker threads. 
+
 ### Running Integration Tests
 After `source setup-env.sh` and `docker compose up`, wait till the services are fully started.
 

@@ -11,3 +11,5 @@ pymilvus==2.2.8
 elasticsearch==8.8.0
 scylla-driver==3.26.2
 nltk
+gunicorn[eventlet]
+futurist
