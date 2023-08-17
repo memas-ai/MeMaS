@@ -7,6 +7,8 @@ Breaks up a document into smaller pieces - preferably parapgraphs if the documen
 well-structured. 
 Returns a list of substrings of the larger document.
 """
+
+
 def segment_document(document: str, max_characters_per_chunk: int, word_search_size=15):
     word_chunks = []
 
@@ -53,6 +55,8 @@ def segment_document(document: str, max_characters_per_chunk: int, word_search_s
 Divides the provided string document into sentences no longer than max_text_len each. 
 Returns the split document as a list of strings.
 """
+
+
 def split_doc(document: str, max_text_len) -> list[str]:
     # Divide into sentences
     first_split = sent_tokenize(document)

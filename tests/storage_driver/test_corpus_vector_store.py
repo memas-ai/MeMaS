@@ -2,7 +2,7 @@ import uuid
 import time
 import re
 from memas.storage_driver.corpus_vector_store import hash_sentence_id
-from memas.storage_driver.corpus_vector_store import split_doc
+from memas.text_parsing.text_parsers import split_doc
 
 
 def test_sentence_id_determinism():

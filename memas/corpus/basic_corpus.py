@@ -14,6 +14,7 @@ MAX_SEGMENT_LENGTH = 1536
 
 _log = logging.getLogger(__name__)
 
+
 class BasicCorpus(Corpus):
 
     def __init__(self, corpus_id: uuid.UUID, corpus_name: str):
@@ -33,7 +34,8 @@ class BasicCorpus(Corpus):
         document_chunks = segment_document(document, MAX_SEGMENT_LENGTH)
 
         # TODO : Need to investigate how to undo when failures on partial insert
-        meta_save = ctx.corpus_metadata.insert_document_metadata(self.corpus_id, doc_id, len(document_chunks), document_name, citation)
+        meta_save = ctx.corpus_metadata.insert_document_metadata(
+            self.corpus_id, doc_id, len(document_chunks), document_name, citation)
 
         vec_save = ctx.corpus_vec.save_documents([doc_entity])
 
@@ -74,7 +76,7 @@ class BasicCorpus(Corpus):
 
         # Search for the vectors
         vec_store_results: list[tuple[float, str, Citation]] = []
-        temp_res2 =  ctx.corpus_vec.search_corpora([self.corpus_id], clue)
+        temp_res2 = ctx.corpus_vec.search_corpora([self.corpus_id], clue)
         for score, doc_entity, start_index, end_index in temp_res2:
 
             # Verify that the text recovered from the vectors fits the maximum sentence criteria

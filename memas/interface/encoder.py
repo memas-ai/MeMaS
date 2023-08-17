@@ -18,7 +18,7 @@ class TextEncoder(ABC):
         Returns:
             numpy.ndarray: embedding
         """
-    
+
     @abstractmethod
     def embed_multiple(self, text_list: list[str]) -> list[numpy.ndarray]:
         """Embed each string of supplied text

@@ -46,27 +46,26 @@ class ESDocumentStore(CorpusDocumentStore):
         response = self.es.indices.create(
             index=self.es_index, mappings=mapping)
         return response["acknowledged"]
-    
-    def save_documents(self, id_doc_pairs : list[str, DocumentEntity]) -> bool:
+
+    def save_documents(self, id_doc_pairs: list[str, DocumentEntity]) -> bool:
         # TODO : Error handling in case of failures to insert
         # TODO : Redo this to have real return (this just checks that at least one insert succeeds)
         return helpers.bulk(self.es, self.gen_insertion_data(id_doc_pairs))[0] != 0
 
-
-    def gen_insertion_data(self, id_doc_pairs : list[str, DocumentEntity]):
-        _log.debug(f"Saving documents for [corpus_ids={[x[1].corpus_id for x in id_doc_pairs]}] [chunk_ids={[x[0] for x in id_doc_pairs]}]")
+    def gen_insertion_data(self, id_doc_pairs: list[str, DocumentEntity]):
+        _log.debug(
+            f"Saving documents for [corpus_ids={[x[1].corpus_id for x in id_doc_pairs]}] [chunk_ids={[x[0] for x in id_doc_pairs]}]")
         for i in range(len(id_doc_pairs)):
             yield {
-                "_index" : self.es_index,
-                "_id" : id_doc_pairs[i][0],
+                "_index": self.es_index,
+                "_id": id_doc_pairs[i][0],
                 CORPUS_FIELD: id_doc_pairs[i][1].corpus_id.hex,
                 NAME_FIELD: id_doc_pairs[i][1].document_name,
                 DOC_FIELD: id_doc_pairs[i][1].document
-            }               
+            }
 
-    
     def search_corpora(self, corpus_ids: list[UUID], clue: str) -> list[tuple[float, DocumentEntity]]:
-        
+
         _log.debug(f"Searching documents for [corpus_ids={corpus_ids}]")
 
         # TODO: Need to look into how many documents to return
@@ -77,7 +76,7 @@ class ESDocumentStore(CorpusDocumentStore):
                     {"match": {DOC_FIELD: clue}}
                 ],
                 "filter": [
-                    {"terms":  {CORPUS_FIELD: [x.hex for  x in corpus_ids]}}
+                    {"terms":  {CORPUS_FIELD: [x.hex for x in corpus_ids]}}
                 ]
             }
         }

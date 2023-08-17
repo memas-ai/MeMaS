@@ -8,57 +8,54 @@ from memas.interface.exceptions import SentenceLengthOverflowException
 from memas.context_manager import ctx
 
 
-def corpora_search(corpus_ids : list[UUID], clue : str) ->  list[tuple[float, str, Citation]]:
-        vector_search_count: int = 10
+def corpora_search(corpus_ids: list[UUID], clue: str) -> list[tuple[float, str, Citation]]:
+    vector_search_count: int = 10
 
-        doc_store_results: list[tuple[float, str, Citation]] = []
-        temp_res = ctx.corpus_doc.multi_corpus_search(corpus_ids, clue)
-        # Search the document store
-        for score, doc_entity in temp_res:
-            document_text = doc_entity.document
-            citation = ctx.corpus_metadata.get_document_citation(doc_entity.corpus_id, doc_entity.document_id)
+    doc_store_results: list[tuple[float, str, Citation]] = []
+    temp_res = ctx.corpus_doc.multi_corpus_search(corpus_ids, clue)
+    # Search the document store
+    for score, doc_entity in temp_res:
+        document_text = doc_entity.document
+        citation = ctx.corpus_metadata.get_document_citation(doc_entity.corpus_id, doc_entity.document_id)
 
-            doc_store_results.append([score, document_text, citation])
+        doc_store_results.append([score, document_text, citation])
 
-        # Search for the vectors
-        vec_store_results: list[tuple[float, str, Citation]] = []
-        temp_res2 = ctx.corpus_vec.multi_corpus_search(corpus_ids, clue)
-        for score, doc_entity, start_index, end_index in temp_res2:
+    # Search for the vectors
+    vec_store_results: list[tuple[float, str, Citation]] = []
+    temp_res2 = ctx.corpus_vec.multi_corpus_search(corpus_ids, clue)
+    for score, doc_entity, start_index, end_index in temp_res2:
 
-            # Verify that the text recovered from the vectors fits the maximum sentence criteria
-            if end_index - start_index != len(doc_entity.document):
-                print("Sanity check, this case should never get triggered")
-                raise SentenceLengthOverflowException(end_index - start_index)
+        # Verify that the text recovered from the vectors fits the maximum sentence criteria
+        if end_index - start_index != len(doc_entity.document):
+            print("Sanity check, this case should never get triggered")
+            raise SentenceLengthOverflowException(end_index - start_index)
 
-            citation = ctx.corpus_metadata.get_document_citation(doc_entity.corpus_id, doc_entity.document_id)
+        citation = ctx.corpus_metadata.get_document_citation(doc_entity.corpus_id, doc_entity.document_id)
 
-            vec_store_results.append([score, doc_entity.document, citation])
+        vec_store_results.append([score, doc_entity.document, citation])
 
-        # print("Docs then Vecs : ")
-        # print(doc_store_results)
-        # print(vec_store_results)
+    # print("Docs then Vecs : ")
+    # print(doc_store_results)
+    # print(vec_store_results)
 
-        # If any of the searches returned no results combine and return
-        if len(vec_store_results) == 0:
-            doc_store_results.sort(key=lambda x: x[0], reverse=True)
-            results = [(y, z) for [x, y, z] in doc_store_results]
-        elif len(doc_store_results) == 0:
-            vec_store_results.sort(key=lambda x: x[0], reverse=False)
-            results = [(y, z) for [x, y, z] in vec_store_results]
-        else:
-            # Combine the results and remove duplicates
-            results = normalize_and_combine(doc_store_results, vec_store_results)
+    # If any of the searches returned no results combine and return
+    if len(vec_store_results) == 0:
+        doc_store_results.sort(key=lambda x: x[0], reverse=True)
+        results = [(y, z) for [x, y, z] in doc_store_results]
+    elif len(doc_store_results) == 0:
+        vec_store_results.sort(key=lambda x: x[0], reverse=False)
+        results = [(y, z) for [x, y, z] in vec_store_results]
+    else:
+        # Combine the results and remove duplicates
+        results = normalize_and_combine(doc_store_results, vec_store_results)
 
-        return results
+    return results
 
 
-    
-    
 def normalize_and_combine(doc_results: list, vec_results: list):
     # print("Docs then Vecs : ")
     # print(doc_results)
     # print(vec_results)
-
 
     # normalization with assumption that top score matches are approximately equal
 
@@ -80,9 +77,9 @@ def normalize_and_combine(doc_results: list, vec_results: list):
     if (doc_max_score != doc_min_score):
         doc_results_normalized = [[(x - doc_min_score) / (doc_max_score - doc_min_score), y, z]
                                   for [x, y, z] in doc_results]
-    else :
+    else:
         doc_results_normalized = [[1.0, y, z]
-                            for [x, y, z] in doc_results]
+                                  for [x, y, z] in doc_results]
 
     # Vector results assume L2 distance of unit vectors so the range is between 0 and 2.
     # if(vec_max_score != vec_min_score) :
@@ -97,9 +94,9 @@ def normalize_and_combine(doc_results: list, vec_results: list):
     # Was considering adjusting the score reward by the document length when a document
     # has a vector within it. Idea was longer docs share more sentences, so they're over rewarded.
     # That might just mean its a good document, so it should recieve that score increase.
-    
+
     avg_doc_len = 1
-    if len(doc_results_normalized) != 0 :
+    if len(doc_results_normalized) != 0:
         avg_doc_len = sum([len(x[1]) for x in doc_results_normalized]) / len(doc_results_normalized)
 
     duplicate_vec_indicies = []
@@ -124,4 +121,4 @@ def normalize_and_combine(doc_results: list, vec_results: list):
     # Sort by descending scoring so best results come first
     doc_results_normalized.sort(key=lambda x: x[0], reverse=True)
 
-    return [(y,z) for [x,y,z] in doc_results_normalized]
+    return [(y, z) for [x, y, z] in doc_results_normalized]

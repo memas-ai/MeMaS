@@ -102,7 +102,7 @@ class MilvusUSESentenceVectorStore(CorpusVectorStore):
         self.collection: Collection = Collection(USE_COLLECTION_NAME, sentance_schema)
         self.collection.load()
         self.encoder.init()
-    
+
     def search_corpora(self, corpus_ids: list[uuid.UUID], clue: str) -> list[tuple[float, DocumentEntity, int, int]]:
         _log.debug(f"Searching vectors for [corpus_ids={corpus_ids}]")
         _log.handlers
@@ -110,7 +110,7 @@ class MilvusUSESentenceVectorStore(CorpusVectorStore):
         vec_search_count = 100
         # Create boolean expression to match all data in the corpus set
         filter_str = ""
-        for corpus_id in corpus_ids :
+        for corpus_id in corpus_ids:
             filter_str += f"{CORPUS_FIELD} == \"{corpus_id.hex}\" ||"
 
         # Remove last OR
@@ -147,12 +147,13 @@ class MilvusUSESentenceVectorStore(CorpusVectorStore):
                 composite_id = doc_entity.document_id.hex + sentence_id.hex
                 end = start + len(sentence)
                 objects.append(USESentenceObject(composite_id, doc_entity.corpus_id.hex, doc_entity.document_name,
-                            sentence[:MAX_TEXT_LENGTH], doc_embeddings[index], start, end))
+                                                 sentence[:MAX_TEXT_LENGTH], doc_embeddings[index], start, end))
                 index = index + 1
                 start = end
 
             insert_count = insert_count + self.collection.insert(convert_batch(objects)).insert_count
 
         return insert_count == sentence_count
+
 
 SINGLETON: CorpusVectorStore = MilvusUSESentenceVectorStore()
