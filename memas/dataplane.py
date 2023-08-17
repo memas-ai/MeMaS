@@ -4,6 +4,7 @@ from memas.context_manager import ctx
 from memas.interface.corpus import Citation, Corpus, CorpusType
 from memas.storage_driver.memas_metadata import split_corpus_pathname
 from memas.corpus.basic_corpus import BasicCorpusFactory
+from memas.corpus.corpus_searching import corpora_search 
 
 dataplane = Blueprint("dp", __name__, url_prefix="/dp")
 
@@ -27,8 +28,10 @@ def recollect():
     # Combine the results and only take the top ones
     search_results.sort(key=lambda x: x[0], reverse=True)
 
+    # TODO : It will improve Query speed significantly to fetch citations after determining which documents to send to user 
+
     # Take only top few scores and remove scoring element before sending
-    return [{"document": doc, "citation": asdict(citation)} for score, doc, citation in search_results[0:3]]
+    return [{"document": doc, "citation": asdict(citation)} for doc, citation in search_results[0:5]]
 
 
 @dataplane.route('/remember', methods=["POST"])
@@ -43,7 +46,7 @@ def remember():
     corpus_name = split_corpus_pathname(corpus_pathname)[1]
     raw_citation: str = request.json["citation"]
     citation = Citation(raw_citation["source_uri"], raw_citation["source_name"],
-                        corpus_name, raw_citation["description"])
+                         raw_citation["description"])
 
     corpus_info = ctx.memas_metadata.get_corpus_info(corpus_pathname)
 

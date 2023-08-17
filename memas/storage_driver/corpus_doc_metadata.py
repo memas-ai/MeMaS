@@ -50,7 +50,6 @@ class CorpusDocumentMetadataStoreImpl(CorpusDocumentMetadataStore):
                                 document_name=document_name,
                                 source_name=citation.source_name,
                                 source_uri=citation.source_uri,
-                                corpus_name=citation.corpus_name,
                                 description=citation.description,
                                 segment_count=num_segments,
                                 added_at=datetime.now())
@@ -71,7 +70,6 @@ class CorpusDocumentMetadataStoreImpl(CorpusDocumentMetadataStore):
             corpus_id=corpus_id, document_id=document_id)
         return Citation(source_uri=result.source_uri,
                         source_name=result.source_name,
-                        corpus_name=result.corpus_name,
                         description=result.description)
 
     def get_document_segment_count(self, corpus_id: UUID, document_id: UUID) -> int:

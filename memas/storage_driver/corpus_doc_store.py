@@ -1,7 +1,7 @@
 import logging
 from typing import Final
 from uuid import UUID
-from elasticsearch import Elasticsearch
+from elasticsearch import Elasticsearch, helpers
 from memas.interface.storage_driver import CorpusDocumentStore, DocumentEntity
 
 
@@ -46,21 +46,28 @@ class ESDocumentStore(CorpusDocumentStore):
         response = self.es.indices.create(
             index=self.es_index, mappings=mapping)
         return response["acknowledged"]
+    
+    def save_documents(self, id_doc_pairs : list[str, DocumentEntity]) -> bool:
+        # TODO : Error handling in case of failures to insert
+        # TODO : Redo this to have real return (this just checks that at least one insert succeeds)
+        return helpers.bulk(self.es, self.gen_insertion_data(id_doc_pairs))[0] != 0
 
-    def save_document(self, chunk_id: str, doc_entity: DocumentEntity) -> bool:
-        _log.debug(f"Saving document for [corpus_id={doc_entity.corpus_id}] [chunk_id={chunk_id}]")
 
-        doc = {
-            CORPUS_FIELD: doc_entity.corpus_id.hex,
-            NAME_FIELD: doc_entity.document_name,
-            DOC_FIELD: doc_entity.document
-        }
-        response = self.es.create(
-            index=self.es_index, id=chunk_id, document=doc)
-        return response['result'] == 'created'
+    def gen_insertion_data(self, id_doc_pairs : list[str, DocumentEntity]):
+        _log.debug(f"Saving documents for [corpus_ids={[x[1].corpus_id for x in id_doc_pairs]}] [chunk_ids={[x[0] for x in id_doc_pairs]}]")
+        for i in range(len(id_doc_pairs)):
+            yield {
+                "_index" : self.es_index,
+                "_id" : id_doc_pairs[i][0],
+                CORPUS_FIELD: id_doc_pairs[i][1].corpus_id.hex,
+                NAME_FIELD: id_doc_pairs[i][1].document_name,
+                DOC_FIELD: id_doc_pairs[i][1].document
+            }               
 
-    def search_corpus(self, corpus_id: UUID, clue: str) -> list[tuple[float, DocumentEntity]]:
-        _log.debug(f"Searching documents for [corpus_id={corpus_id}]")
+    
+    def search_corpora(self, corpus_ids: list[UUID], clue: str) -> list[tuple[float, DocumentEntity]]:
+        
+        _log.debug(f"Searching documents for [corpus_ids={corpus_ids}]")
 
         # TODO: Need to look into how many documents to return
         max_retrieved = 20
@@ -70,11 +77,15 @@ class ESDocumentStore(CorpusDocumentStore):
                     {"match": {DOC_FIELD: clue}}
                 ],
                 "filter": [
-                    {"term":  {CORPUS_FIELD: corpus_id.hex}}
+                    {"terms":  {CORPUS_FIELD: [x.hex for  x in corpus_ids]}}
                 ]
             }
         }
         response = self.es.search(index=self.es_index, query=search_query, size=max_retrieved)
+
+        # Record the time it took
+        time = response["took"]
+        _log.debug(f"Time it took for ES was {time}")
 
         result = []
         for hit in response["hits"]["hits"]:
