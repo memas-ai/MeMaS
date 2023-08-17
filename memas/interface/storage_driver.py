@@ -131,23 +131,22 @@ class CorpusDocumentStore(StorageDriver):
         Corpus Document Store for storing and searching documents
     """
     @abstractmethod
-    def save_document(self, chunk_id: str, doc_entity: DocumentEntity) -> bool:
-        """Save a document into the document store
+    def save_documents(self, chunk_id_doc_pairs: list[str, DocumentEntity]) -> bool:
+        """Save a set of documents into the document store
 
         Args:
-            doc_entity (DocumentEntity): Document Entity object
-            chunk_id (str) : The identifier for documentID and chunk index
+            id_doc_pairs (list[str, DocumentEntity]) : Pairs of documentIDs and Document Entities to insert
 
         Returns:
             bool: success or not
         """
 
     @abstractmethod
-    def search_corpus(self, corpus_id: UUID, clue: str) -> list[tuple[float, DocumentEntity]]:
-        """Search corpus using a clue
+    def search_corpora(self, corpus_ids: list[UUID], clue: str) -> list[tuple[float, DocumentEntity]]:
+        """Search set of corpora using a clue
 
         Args:
-            corpus_id (UUID): corpus id
+            corpus_ids list[UUID]: corpus ids
             clue (str): clue to search with
 
         Returns:
@@ -165,7 +164,7 @@ class CorpusVectorStore(StorageDriver):
         self.encoder: TextEncoder = encoder
 
     @abstractmethod
-    def save_document(self, doc_entity: DocumentEntity) -> bool:
+    def save_documents(self, doc_entities: list[DocumentEntity]) -> bool:
         """Saves a document into the vector store
 
         Args:
@@ -173,13 +172,13 @@ class CorpusVectorStore(StorageDriver):
         """
 
     @abstractmethod
-    def search(self, corpus_id: UUID, clue: str) -> list[tuple[float, DocumentEntity, int, int]]:
-        """Search corpus with clue
+    def search_corpora(self, corpus_ids: list[UUID], clue: str) -> list[tuple[float, DocumentEntity, int, int]]:
+        """Search set of corpora using a clue
 
         Args:
-            corpus_id (UUID): corpus id
+            corpus_ids list[UUID]: corpus ids
             clue (str): clue to search with
 
         Returns:
-            list[tuple[float, UUID, UUID]]: _description_
+            list[tuple[float, DocumentEntity]]: list of (score, document. startIndex, endIndex) pairs that deonte sentence boundaries
         """

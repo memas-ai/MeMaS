@@ -13,7 +13,7 @@ from pymilvus import (
 )
 from memas.encoder.universal_sentence_encoder import USE_VECTOR_DIMENSION, USETextEncoder
 from memas.interface.storage_driver import CorpusVectorStore, DocumentEntity
-from nltk.tokenize import sent_tokenize
+from memas.text_parsing.text_parsers import split_doc
 
 
 _log = logging.getLogger(__name__)
@@ -103,12 +103,22 @@ class MilvusUSESentenceVectorStore(CorpusVectorStore):
         self.collection.load()
         self.encoder.init()
 
-    def search(self, corpus_id: uuid.UUID, clue: str) -> list[tuple[float, DocumentEntity, int, int]]:
-        _log.debug(f"Searching vectors for [corpus_id={corpus_id}]")
+    def search_corpora(self, corpus_ids: list[uuid.UUID], clue: str) -> list[tuple[float, DocumentEntity, int, int]]:
+        _log.debug(f"Searching vectors for [corpus_ids={corpus_ids}]")
+        _log.handlers
 
         vec_search_count = 100
-        result = self.collection.search(self.encoder.embed([clue]).tolist(), EMBEDDING_FIELD, param={},
-                                        limit=vec_search_count, expr=f"{CORPUS_FIELD} == \"{corpus_id.hex}\"",
+        # Create boolean expression to match all data in the corpus set
+        filter_str = ""
+        for corpus_id in corpus_ids:
+            filter_str += f"{CORPUS_FIELD} == \"{corpus_id.hex}\" ||"
+
+        # Remove last OR
+        filter_str = filter_str[:-2]
+
+        clue_split = split_doc(clue, MAX_TEXT_LENGTH)
+        result = self.collection.search([x.tolist() for x in self.encoder.embed_multiple(clue_split)], EMBEDDING_FIELD, param={},
+                                        limit=vec_search_count, expr=filter_str,
                                         output_fields=[CORPUS_FIELD, START_FIELD, END_FIELD, DOCUMENT_NAME, TEXT_PREVIEW])
         output = []
         for hits in result:
@@ -118,69 +128,32 @@ class MilvusUSESentenceVectorStore(CorpusVectorStore):
                 output.append((hit.distance, doc_entity, hit.entity.start_index, hit.entity.end_index))
         return output
 
-    def save_document(self, doc_entity: DocumentEntity) -> bool:
-        _log.debug(f"Saving vectors for [corpus_id={doc_entity.corpus_id}]")
+    def save_documents(self, doc_entities: list[DocumentEntity]) -> bool:
+        _log.debug(f"Saving vectors for [corpus_ids={[x.corpus_id for x in doc_entities]}]")
 
-        sentences = split_doc(doc_entity.document)
-        objects: list[USESentenceObject] = []
+        insert_count = 0
+        sentence_count = 0
+        for doc_entity in doc_entities:
+            sentences = split_doc(doc_entity.document, MAX_TEXT_LENGTH)
+            objects: list[USESentenceObject] = []
+            sentence_count = sentence_count + len(sentences)
 
-        start = 0
-        for sentence in sentences:
-            # deterministically generate the sentence id, so we can later get/delete them
-            sentence_id = hash_sentence_id(doc_entity.document_id, sentence)
-            composite_id = doc_entity.document_id.hex + sentence_id.hex
-            end = start + len(sentence)
-            objects.append(USESentenceObject(composite_id, doc_entity.corpus_id.hex, doc_entity.document_name,
-                           sentence[:MAX_TEXT_LENGTH], self.encoder.embed([sentence]), start, end))
+            doc_embeddings = self.encoder.embed_multiple(sentences)
+            start = 0
+            index = 0
+            for sentence in sentences:
+                # deterministically generate the sentence id, so we can later get/delete them
+                sentence_id = hash_sentence_id(doc_entity.document_id, sentence)
+                composite_id = doc_entity.document_id.hex + sentence_id.hex
+                end = start + len(sentence)
+                objects.append(USESentenceObject(composite_id, doc_entity.corpus_id.hex, doc_entity.document_name,
+                                                 sentence[:MAX_TEXT_LENGTH], doc_embeddings[index], start, end))
+                index = index + 1
+                start = end
 
-            start = end
+            insert_count = insert_count + self.collection.insert(convert_batch(objects)).insert_count
 
-        insert_count = self.collection.insert(convert_batch(objects)).insert_count
-
-        return insert_count == len(sentences)
-
-
-def split_doc(document: str, max_text_len=MAX_TEXT_LENGTH) -> list[str]:
-    # Divide into sentences
-    first_split = sent_tokenize(document)
-
-    final_sentences = []
-    # Any "sentence" longer than max_text_len characters gets split further. Splits are attempted
-    # at word boundaries. Words longer than word_search_size that lie exactly on the boundary of a segment
-    # are not guaranteed to be unsplit. Input is too malformed at that point, so just split whereever.
-    for segment in first_split:
-        if (len(segment) < max_text_len):
-            final_sentences.append(segment)
-        else:
-            segment_index = 0
-            word_search_size = 25
-
-            # Case 1: Find start and end word boundaries on both sides for all middle sentences
-            while segment_index < len(segment) - max_text_len:
-                end_index = segment_index + max_text_len
-                space_index_end = segment.find(" ", max(0, end_index - word_search_size),
-                                               min(end_index, len(segment)))
-
-                # If a word boundary at end is found reassign index to accomodate.
-                if space_index_end > 0:
-                    end_index = space_index_end
-
-                new_segment = segment[segment_index: end_index]
-                final_sentences.append(new_segment)
-                segment_index = end_index
-
-            # Case 2: Find boundary for last sentence.
-            final_segment_start_index = min(len(segment), len(segment) - max_text_len + word_search_size)
-            last_chunk_space_index = segment.find(" ", max(0, final_segment_start_index - word_search_size),
-                                                  final_segment_start_index)
-
-            if last_chunk_space_index > 0:
-                final_segment_start_index = last_chunk_space_index
-
-            # TODO : On Search, Need to combine last fragment with previous if both are present
-            final_sentences.append(segment[final_segment_start_index:])
-
-    return final_sentences
+        return insert_count == sentence_count
 
 
 SINGLETON: CorpusVectorStore = MilvusUSESentenceVectorStore()

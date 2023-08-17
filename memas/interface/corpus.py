@@ -13,7 +13,6 @@ class CorpusType(Enum):
 class Citation:
     source_uri: str
     source_name: str
-    corpus_name: str
     description: str
 
 
@@ -54,17 +53,6 @@ class Corpus(ABC):
 
         Returns:
             list[tuple[str, Citation]]: a list of (document, citation) pairs
-        """
-
-    @abstractmethod
-    def generate_search_instructions(self, clue: str) -> any:
-        """Generates batchable search instructions, used for multi corpus queries. TODO: decide instructions format
-
-        Args:
-            clue (str): _description_
-
-        Returns:
-            any: _description_
         """
 
 

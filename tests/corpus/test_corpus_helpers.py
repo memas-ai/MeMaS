@@ -1,5 +1,5 @@
 import re
-from memas.corpus.corpus_helpers import segment_document
+from memas.text_parsing.text_parsers import segment_document
 
 
 def test_document_segmentation():

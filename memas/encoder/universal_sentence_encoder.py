@@ -1,6 +1,8 @@
 import tensorflow_hub as hub
+import tensorflow as tf
 import numpy as np
 from memas.interface.encoder import TextEncoder
+import random
 
 
 # @param ["https://tfhub.dev/google/universal-sentence-encoder/4",
@@ -21,3 +23,6 @@ class USETextEncoder(TextEncoder):
 
     def embed(self, text: str) -> np.ndarray:
         return self.encoder(text).numpy()
+
+    def embed_multiple(self, text_list: list[str]) -> list[np.ndarray]:
+        return [x.numpy() for x in self.encoder(text_list)]
