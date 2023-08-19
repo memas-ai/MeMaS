@@ -31,7 +31,7 @@ to start the memas server
 
 To run the app with wsgi server, run
 ```
-gunicorn -w 1 -k eventlet 'memas.app:create_app(config_filename="memas-config.yml")'
+gunicorn -b :8010 -w 1 -k eventlet 'memas.app:create_app(config_filename="memas-config.yml")'
 ```
 note `-w` sets the number of worker threads. 
 
