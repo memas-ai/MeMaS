@@ -1,9 +1,3 @@
-# benchmarking requirements
-ipykernel
-datasets==2.13.1
-apache_beam==2.49.0
-openai
-
 flask==2.3.2
 tensorflow==2.12.0
 tensorflow_hub
