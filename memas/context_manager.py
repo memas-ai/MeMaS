@@ -71,7 +71,7 @@ class ContextManager:
         self.es: Elasticsearch
 
         # Corpus provider
-        self.corpus_provider: CorpusProvider = CorpusProvider()
+        self.corpus_provider: CorpusProvider
 
     def setup_cassandra_keyspace(self):
         """Setup the cassandra keyspace. We only want to run the very first server launch. 
@@ -120,6 +120,8 @@ class ContextManager:
         self.corpus_metadata.init()
         self.corpus_vec.init()
         self.corpus_doc.init()
+
+        self.corpus_provider = CorpusProvider(self.corpus_metadata, self.corpus_doc, self.corpus_vec)
 
     def init(self) -> None:
         self.init_clients()

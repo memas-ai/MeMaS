@@ -2,9 +2,7 @@ from dataclasses import asdict
 from flask import Blueprint, current_app, request
 from memas.context_manager import ctx
 from memas.interface.corpus import Citation, Corpus, CorpusType
-from memas.storage_driver.memas_metadata import split_corpus_pathname
-from memas.corpus.basic_corpus import BasicCorpusFactory
-from memas.corpus.corpus_searching import corpora_search
+
 
 dataplane = Blueprint("dp", __name__, url_prefix="/dp")
 
@@ -38,20 +36,21 @@ def recall():
 def memorize():
     corpus_pathname: str = request.json["corpus_pathname"]
     document: str = request.json["document"]
-    document_name: str = request.json.get("document_name", "")
+    raw_citation: str = request.json["citation"]
+
+    document_name = raw_citation.get("document_name", "")
 
     current_app.logger.info(f"Memorizing [corpus_pathname=\"{corpus_pathname}\"] [document_name=\"{document_name}\"]")
 
-    # TODO : need to be able to fetch the corpus name for citation purposes
-    corpus_name = split_corpus_pathname(corpus_pathname)[1]
-    raw_citation: str = request.json["citation"]
-    citation = Citation(raw_citation["source_uri"], raw_citation["source_name"],
-                        raw_citation["description"])
+    citation = Citation(source_uri=raw_citation.get("source_uri", ""),
+                        source_name=raw_citation.get("source_name", ""),
+                        description=raw_citation.get("description", ""),
+                        document_name=document_name)
 
     corpus_info = ctx.memas_metadata.get_corpus_info(corpus_pathname)
 
     corpus: Corpus = ctx.corpus_provider.get_corpus(corpus_info.corpus_id, corpus_type=corpus_info.corpus_type)
-    success = corpus.store_and_index(document, document_name, citation)
+    success = corpus.store_and_index(document, citation)
 
     current_app.logger.info(f"Memorize finished [success={success}]")
     return {"success": success}

@@ -14,6 +14,7 @@ class Citation:
     source_uri: str
     source_name: str
     description: str
+    document_name: str
 
 
 @dataclass
@@ -29,11 +30,11 @@ class Corpus(ABC):
     """
 
     def __init__(self, corpus_id: UUID, corpus_name: str):
-        self.corpus_id = corpus_id
-        self.corpus_name = corpus_name
+        self.corpus_id: UUID = corpus_id
+        self.corpus_name: str = corpus_name
 
     @abstractmethod
-    def store_and_index(self, document: str, document_name: str, citation: Citation) -> bool:
+    def store_and_index(self, document: str, citation: Citation) -> bool:
         """Store and index a "document"
 
         Args:

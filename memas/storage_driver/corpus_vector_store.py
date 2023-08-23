@@ -41,7 +41,7 @@ fields = [
                 max_length=32, is_partition_key=True),
     FieldSchema(name=DOCUMENT_NAME, dtype=DataType.VARCHAR,
                 max_length=256),
-    FieldSchema(name="text_preview", dtype=DataType.VARCHAR, max_length=MAX_TEXT_LENGTH),
+    FieldSchema(name=TEXT_PREVIEW, dtype=DataType.VARCHAR, max_length=MAX_TEXT_LENGTH),
     FieldSchema(name=EMBEDDING_FIELD, dtype=DataType.FLOAT_VECTOR, dim=USE_VECTOR_DIMENSION),
     FieldSchema(name=START_FIELD, dtype=DataType.INT64),
     FieldSchema(name=END_FIELD, dtype=DataType.INT64),
