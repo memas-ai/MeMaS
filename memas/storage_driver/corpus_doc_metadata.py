@@ -31,13 +31,12 @@ class CorpusDocumentMetadataStoreImpl(CorpusDocumentMetadataStore):
     def first_init(self):
         self.init()
 
-    def insert_document_metadata(self, corpus_id: UUID, document_id: UUID, num_segments: int, document_name: str, citation: Citation) -> bool:
+    def insert_document_metadata(self, corpus_id: UUID, document_id: UUID, num_segments: int, citation: Citation) -> bool:
         """Inserts document metadata
 
         Args:
             corpus_id (UUID): corpus id
             document_id (UUID): document id
-            document_name (str): document name
             citation (Citation): citation object
 
         Returns:
@@ -47,7 +46,7 @@ class CorpusDocumentMetadataStoreImpl(CorpusDocumentMetadataStore):
 
         DocumentMetadata.create(corpus_id=corpus_id,
                                 document_id=document_id,
-                                document_name=document_name,
+                                document_name=citation.document_name,
                                 source_name=citation.source_name,
                                 source_uri=citation.source_uri,
                                 description=citation.description,
@@ -70,7 +69,8 @@ class CorpusDocumentMetadataStoreImpl(CorpusDocumentMetadataStore):
             corpus_id=corpus_id, document_id=document_id)
         return Citation(source_uri=result.source_uri,
                         source_name=result.source_name,
-                        description=result.description)
+                        description=result.description,
+                        document_name=result.document_name)
 
     def get_document_segment_count(self, corpus_id: UUID, document_id: UUID) -> int:
         """Retrieves the number of segments a stored document was split into 

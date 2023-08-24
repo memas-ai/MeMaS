@@ -5,7 +5,6 @@ from memas.interface.corpus import Corpus, CorpusFactory
 from memas.interface.corpus import Citation
 from memas.interface.storage_driver import DocumentEntity
 from memas.interface.exceptions import SentenceLengthOverflowException
-from memas.context_manager import ctx
 
 
 def corpora_search(corpus_ids: list[UUID], clue: str) -> list[tuple[float, str, Citation]]:
