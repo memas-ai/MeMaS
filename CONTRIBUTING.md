@@ -1,9 +1,16 @@
-# Development Guide
+# Contributing to MeMaS
+Hi there! Thank you for even being interested in contributing to MeMaS. As an open source project in a rapidly developing field, we are extremely open to contributions, whether they be in the form of new features, improved infra, better documentation, or bug fixes.
 
-## Prerequiste
-Python 3.10. The code breaks on python 3.8 and below, and 3.9 is untested.
+To contribute to this project, please follow the [fork and pull request](https://docs.github.com/en/get-started/quickstart/contributing-to-projects) workflow. Please do not try to push directly to this repo unless you are maintainer. 
 
-## Development Setup
+**For new features/bigger changes, talk to maintainers in the discord before you set off.**
+
+## Development Guide
+
+### Prerequiste
+Python 3.10 and docker + linux. The code breaks on python 3.8 and below, and 3.9 is untested.
+
+### Development Setup
 
 Run `source setup-env.sh`, this will install all the needed development tools, as well as setup the needed environment variables.
 
