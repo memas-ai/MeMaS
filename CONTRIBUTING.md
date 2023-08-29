@@ -8,24 +8,35 @@ To contribute to this project, please follow the [fork and pull request](https:/
 ## Development Guide
 
 ### Prerequiste
-Python 3.10 and docker + linux. The code breaks on python 3.8 and below, and 3.9 is untested.
+Python 3.10, [Docker](https://www.docker.com/), and Linux (or WSL). The code breaks on python 3.8 and below, and 3.9 is untested.
 
+If you are working using WSL, follow this guide to [configure Docker](https://docs.docker.com/desktop/wsl/). And for first time WSL users, I HIGHLY recommend cloning MeMaS directly into your WSL file system.
 ### Development Setup
 
-Run `source setup-env.sh`, this will install all the needed development tools, as well as setup the needed environment variables.
+Run `source setup-env.sh`, this will install all the needed development tools, as well as setup the needed environment variables. 
 
-### Running Docker
+**NOTE that this command needs to be ran for each new shell instance, since it sets up environment variables.**
+### Using Docker
 In the top level of this repo, run `docker compose up`, and it will spin up 1 es nodes, 1 scylla nodes, 1 milvus node, and a few more. This is a very basic development setup.
 
-May need to run `sysctl -w vm.max_map_count=262144`.
+To stop docker execution, run Control+C in the terminal you are running `docker compose up`, or run `docker compose down`.
 
-### Initializing the MeMaS server
-Due to the dependencies, the first time running MeMaS, we need to use a special command to initialize and configure the dependencies.
+If you want to clean your local docker images, run 
+```bash
+docker compose down --volumes
+```
+
+FYI you may need to run `sysctl -w vm.max_map_count=262144` if you get an error when trying to start elasticsearch.
+
+### First time initializing the MeMaS server
+**NOTE: Only run this phase when you are working with a clean set of docker dependencies, aka a fresh start or after `docker compose down --volumes`.**
+
+Due to the service dependencies, the first time running MeMaS, we need to use a special command to initialize and configure the dependencies.
 
 After `source setup-env.sh` and `docker compose up`, wait till the services are fully started.
 
 Then run 
-```
+```bash
 flask --app 'memas.app:create_app(config_filename="memas-config.yml", first_init=True)' run
 ```
 
@@ -35,13 +46,13 @@ This will run for a while then exit. Upon exit, your MeMaS is properly setup.
 After `source setup-env.sh` and `docker compose up`, wait till the services are fully started.
 
 Then run 
-```
+```bash
 flask --app 'memas.app:create_app(config_filename="memas-config.yml")' run
 ``` 
 to start the memas server
 
 To run the app with wsgi server, run
-```
+```bash
 gunicorn -w 1 -k eventlet 'memas.app:create_app(config_filename="memas-config.yml")'
 ```
 note `-w` sets the number of worker threads. 
@@ -50,6 +61,8 @@ note `-w` sets the number of worker threads.
 After `source setup-env.sh` and `docker compose up`, wait till the services are fully started.
 
 Then run 
-```
+```bash
 python3 -m pytest integration-tests
 ```
+
+**NOTE: MeMaS server is not needed for this**

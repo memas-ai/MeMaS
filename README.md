@@ -16,6 +16,9 @@
     - Fine grain and real time control over even individual chatbots
 
 ## Get Started
+### Examples
+Examples are posted in https://github.com/memas-ai/memas-examples.
+
 ### Setting up the server
 TODO, right now follow [CONTRIBUTING.md](CONTRIBUTING.md)
 ### Client and SDK
