@@ -33,6 +33,7 @@ jobs:
         python3 -m pytest tests
     - name: Run integration tests
       run: |
+        source setup-env.sh
         docker compose up --detach
         python3 -m pytest integration tests
         docker compose down --volumes
