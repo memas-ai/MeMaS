@@ -35,7 +35,7 @@ jobs:
       run: |
         source setup-env.sh
         docker compose up --detach
-        python3 -m pytest integration tests
+        python3 -m pytest integration-tests
         docker compose down --volumes
 
 #     - name: Lint with flake8
