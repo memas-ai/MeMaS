@@ -31,6 +31,12 @@ jobs:
       run: |
         source .venv/bin/activate
         python3 -m pytest tests
+    - name: Run integration tests
+      run: |
+        docker compose up --detach
+        python3 -m pytest integration tests
+        docker compose down --volumes
+
 #     - name: Lint with flake8
 #       run: |
 #         # stop the build if there are Python syntax errors or undefined names
