@@ -34,7 +34,7 @@ jobs:
     - name: Run integration tests
       run: |
         source setup-env.sh
-        docker compose up --detach
+        docker compose up --detach --wait --wait-timeout 60
         python3 -m pytest integration-tests
         docker compose down --volumes
 
