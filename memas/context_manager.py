@@ -91,7 +91,7 @@ class ContextManager:
 
     def init_clients(self) -> None:
         # connect to cassandra
-        c_connection.setup(['127.0.0.1'], self.consts.cassandra_keyspace, protocol_version=4)
+        c_connection.setup([self.consts.cassandra_ip], self.consts.cassandra_keyspace, protocol_version=4)
 
         # TODO: properly support https
         # connect to elastic search

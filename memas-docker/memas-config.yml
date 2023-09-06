@@ -1,0 +1,13 @@
+CASSANDRA:
+  ip: "scylla"
+  port: 9042
+  keyspace: "memas"
+  replication_factor: 1
+
+ELASTICSEARCH:
+  ip: "memas-es01"
+  port: 9200
+
+MILVUS:
+  ip: "milvus-standalone"
+  port: 19530

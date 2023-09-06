@@ -7,8 +7,10 @@ from memas.interface.corpus import Citation
 
 corpus_name = "test corpus1"
 
+
 def test_save_then_search_one_corpus(es_client):
-    test_corpus = basic_corpus.BasicCorpus(uuid.uuid4(), corpus_name, ctx.corpus_metadata, ctx.corpus_doc, ctx.corpus_vec)
+    test_corpus = basic_corpus.BasicCorpus(
+        uuid.uuid4(), corpus_name, ctx.corpus_metadata, ctx.corpus_doc, ctx.corpus_vec)
 
     text1 = "The sun is high. California sunshine is great. "
     text2 = "I picked up my phone and then dropped it again. I cant seem to get a good grip on things these days. It persists into my everyday tasks"

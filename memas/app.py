@@ -10,6 +10,7 @@ def create_app(config_filename, *, first_init=False):
     app.ctx: ContextManager = ContextManager(app.config)
     if first_init:
         app.ctx.first_init()
+        app.logger.info("Finished first time initialization")
         exit(0)
 
     app.ctx.init()

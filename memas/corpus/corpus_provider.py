@@ -11,12 +11,12 @@ _log = logging.getLogger(__name__)
 class CorpusProvider:
     def __init__(self, metadata_store: CorpusDocumentMetadataStore, doc_store: CorpusDocumentStore, vec_store: CorpusVectorStore) -> None:
         self.factory_dict: dict[CorpusType, CorpusFactory] = dict()
-        
+
         basic_corpus_factory = BasicCorpusFactory(metadata_store, doc_store, vec_store)
         self.factory_dict[CorpusType.CONVERSATION] = basic_corpus_factory
         self.factory_dict[CorpusType.KNOWLEDGE] = basic_corpus_factory
 
-    def get_corpus(self, corpus_id: UUID, *, corpus_type: CorpusType, namespace_id: UUID=None) -> Corpus:
+    def get_corpus(self, corpus_id: UUID, *, corpus_type: CorpusType, namespace_id: UUID = None) -> Corpus:
         """Gets the Corpus class based on the corpus_id
 
         Args:
