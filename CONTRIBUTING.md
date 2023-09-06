@@ -22,7 +22,7 @@ Run `source setup-env.sh`, this will install all the needed development tools, a
 In the top level of this repo, run 
 
 ```bash
-docker compose --build --profile dev up
+docker compose --profile dev up --build
 ```
 
 This will spin up 1 MeMaS instance running in gunicorn, 1 es nodes, 1 scylla nodes, 1 milvus node, and a few more. This is a very basic development setup.
