@@ -1,14 +1,56 @@
 version: '3'
 
 services:
+
+  memas-init:
+    build: 
+      context: .
+    image: memas:latest
+    container_name: memas-init
+    depends_on: 
+      scylla:
+        condition: service_healthy
+      milvus:
+        condition: service_started
+      es01:
+        condition: service_started
+    env_file:
+      - .env
+    volumes:
+      - memas_data:/memas
+    command: /memas/init.sh 30
+    profiles: ["dev"]
+
+  memas:
+    build: 
+      context: .
+    image: memas:latest
+    container_name: memas
+    depends_on: 
+      memas-init:
+        condition: service_completed_successfully
+    env_file:
+      - .env
+    volumes:
+      - memas_data:/memas
+    ports:
+      - 8010:8010
+    # command: ./wait-for-it.sh milvus-standalone:19530 -t 300 -- gunicorn -w 1 -k eventlet 'memas.app:create_app(config_filename="memas-config.yml")'
+    profiles: ["dev"]
+
   scylla:
     image: scylladb/scylla
     container_name: scylla
     command: --smp=2
     ports:
-      - "9042:9042"
+      - 9042:9042
     volumes:
       - scylla_data:/var/lib/scylla
+    healthcheck:
+      test: ["CMD-SHELL", "[ $$(nodetool statusgossip) = running ]"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
 
   etcd:
     container_name: milvus-etcd
@@ -37,7 +79,7 @@ services:
       timeout: 20s
       retries: 3
 
-  standalone:
+  milvus:
     container_name: milvus-standalone
     image: milvusdb/milvus:v2.2.8
     command: ["milvus", "run", "standalone"]
@@ -47,13 +89,14 @@ services:
     volumes:
       - milvus_data:/var/lib/milvus
     ports:
-      - "19530:19530"
-      - "9091:9091"
+      - 19530:19530
+      - 9091:9091
     depends_on:
       - "etcd"
       - "minio"
 
   es01:
+    container_name: memas-es01
     image: elasticsearch:${ES_VERSION}
     volumes:
       - esdata01:/usr/share/elasticsearch/data
@@ -71,6 +114,9 @@ services:
 
 
 volumes:
+  memas_data:
+    driver: local
+
   esdata01:
     driver: local
 
@@ -88,4 +134,4 @@ volumes:
 
 networks:
   default:
-    name: milvus_dev
+    name: memas_dev

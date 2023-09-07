@@ -108,7 +108,7 @@ class BasicCorpusFactory(CorpusFactory):
         self.metadata_store: CorpusDocumentMetadataStore = metadata_store
         self.doc_store: CorpusDocumentStore = doc_store
         self.vec_store: CorpusVectorStore = vec_store
-    
+
     def produce(self, corpus_id: uuid.UUID):
         # TODO: Maybe change the Corpus Name Parameter
         return BasicCorpus(corpus_id, "BasicCorpus", self.metadata_store, self.doc_store, self.vec_store)
