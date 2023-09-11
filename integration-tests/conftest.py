@@ -65,6 +65,11 @@ app: Flask = create_test_app()
 
 
 @pytest.fixture
+def test_client():
+    yield app.test_client()
+
+
+@pytest.fixture
 def es_client():
     with app.app_context():
         yield ctx.es

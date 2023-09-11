@@ -4,10 +4,10 @@ from typing import Final
 import uuid
 from cassandra.cqlengine import columns, management
 from cassandra.cqlengine.models import Model
-from cassandra.cqlengine.query import BatchQuery, LWTException
+from cassandra.cqlengine.query import BatchQuery, DoesNotExist, LWTException
 from memas.interface import corpus
 from memas.interface.corpus import CorpusType
-from memas.interface.exceptions import BadArgumentException, IllegalNameException, NamespaceExistsException
+from memas.interface.exceptions import IllegalNameException, NamespaceDoesNotExistException, NamespaceExistsException
 from memas.interface.namespace import ROOT_ID, ROOT_NAME, NAMESPACE_SEPARATOR, CORPUS_SEPARATOR, is_pathname_format_valid, is_name_format_valid
 from memas.interface.storage_driver import MemasMetadataStore
 
@@ -114,9 +114,14 @@ class MemasMetadataStoreImpl(MemasMetadataStore):
         self.init()
 
     def _get_id_by_name(self, fullname: str) -> uuid.UUID:
+        # the root user currently only exists logically
         if fullname == ROOT_NAME:
             return ROOT_ID
-        result = NamespaceNameToId.get(fullname=fullname)
+
+        try:
+            result = NamespaceNameToId.get(fullname=fullname)
+        except DoesNotExist as e:
+            raise NamespaceDoesNotExistException(fullname) from e
         return result.id
 
     def _get_ids_by_name(self, fullname: str) -> tuple[uuid.UUID, uuid.UUID]:
@@ -125,20 +130,15 @@ class MemasMetadataStoreImpl(MemasMetadataStore):
         else:
             parent_pathname, child_name = split_namespace_pathname(fullname)
 
-        # if parent is root
-        if parent_pathname == ROOT_NAME:
-            child_id = NamespaceNameToId.get(fullname=fullname).id
-            return (ROOT_ID, child_id)
-
-        child_result = NamespaceNameToId.get(fullname=fullname)
-        parent_result = NamespaceNameToId.get(fullname=parent_pathname)
-        return (parent_result.id, child_result.id)
+        child_id = self._get_id_by_name(fullname=fullname)
+        parent_id = self._get_id_by_name(fullname=parent_pathname)
+        return (parent_id, child_id)
 
     def create_namespace(self, namespace_pathname: str, *, parent_id: uuid.UUID = None) -> uuid.UUID:
         _log.debug(f"Creating namespace for [namespace_pathname=\"{namespace_pathname}\"]")
 
         if namespace_pathname == ROOT_NAME:
-            raise BadArgumentException("\"\" is reserved for the root namespace!")
+            raise NamespaceExistsException(namespace_pathname, "\"\" is reserved for the root namespace!")
         if not is_pathname_format_valid(namespace_pathname):
             raise IllegalNameException(namespace_pathname)
 
