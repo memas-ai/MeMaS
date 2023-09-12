@@ -12,7 +12,7 @@ class InitCorpora(PipelineTask):
         self.corpus_names: list[str] = corpus_names
 
     def execute(self, context: PipelineContext) -> None:
-        context.cp_client = memas_sdk.Client(self.host, self.port)
+        context.cp_client = memas_sdk.Client(self.host, self.port, self.namespace_name)
         context.dp_client = memas_client.Client(self.host, self.port, self.namespace_name)
         context.cp_client.create_user(self.namespace_name)
         for corpus_name in self.corpus_names:

@@ -25,7 +25,7 @@ def test_save_then_search2():
     store.save_documents([DocumentEntity(corpus_id1, document_id0, "doc0",
                                          "Before This is a runon sentence meant to test the logic of the splitting capabilites but that is only the start, there is nothing that can break this sentecne up other than some handy logic even in the worst case, too bad I only know how to use commas")])
     store.save_documents([DocumentEntity(corpus_id1, document_id1, "doc1",
-                                         "The sun is high! California sunshine is great. Did you catch my quest? Oh oh! lol")])
+                                         "The sun is high! California sunshine is great. Did you catch my quest? Oh oh! lol. There is no way this is one sentence.")])
     store.save_documents([DocumentEntity(corpus_id1, document_id2, "doc2",
                                          "I picked up my phone and then dropped it again")])
     store.save_documents([DocumentEntity(corpus_id2, document_id3, "doc3", "The weather is great today")])

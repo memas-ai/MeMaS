@@ -5,7 +5,7 @@ from werkzeug.local import LocalProxy
 from flask import current_app, Config
 from cassandra.cluster import Cluster, Session
 from cassandra.cqlengine import connection as c_connection
-from elasticsearch import Elasticsearch
+from elasticsearch import AsyncElasticsearch
 from pymilvus import connections as milvus_connection
 from memas.interface.exceptions import NotProperlyInitializedException
 from memas.interface.storage_driver import CorpusDocumentMetadataStore, CorpusDocumentStore, CorpusVectorStore, MemasMetadataStore
@@ -68,7 +68,7 @@ class ContextManager:
         self.corpus_doc: CorpusDocumentStore
 
         # clients
-        self.es: Elasticsearch
+        self.es: AsyncElasticsearch
 
         # Corpus provider
         self.corpus_provider: CorpusProvider = CorpusProvider()
@@ -96,7 +96,7 @@ class ContextManager:
         # TODO: properly support https
         # connect to elastic search
         es_addr = f"http://{self.consts.es_ip}:{self.consts.es_port}"
-        self.es = Elasticsearch(es_addr, basic_auth=("elastic", self.consts.es_pwd))
+        self.es = AsyncElasticsearch(es_addr, basic_auth=("elastic", self.consts.es_pwd),timeout=120)
 
         # connect to milvus
         milvus_connection.connect("default", host=self.consts.milvus_ip, port=self.consts.milvus_port)

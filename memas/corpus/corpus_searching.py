@@ -1,6 +1,7 @@
 # from search_redirect import SearchSettings
 from uuid import UUID
-from functools import reduce
+import logging
+import datetime
 from memas.interface.corpus import Corpus, CorpusFactory
 from memas.interface.corpus import Citation
 from memas.interface.storage_driver import DocumentEntity
@@ -53,6 +54,14 @@ def corpora_search(corpus_ids: list[UUID], clue: str) -> list[tuple[float, str, 
 
 
 def normalize_and_combine(doc_results: list, vec_results: list):
+    logger = logging.getLogger('spam_application')
+    logger.setLevel(logging.DEBUG)
+    # create file handler which logs even debug messages
+    fh = logging.FileHandler(f"logging/{datetime.datetime.now()}searchquery.log")
+    fh.setLevel(logging.DEBUG)
+    logger.addHandler(fh)
+    logger.debug(f"Doc Results are : {doc_results}]\n\n")
+    logger.debug(f"VEC Results are : {vec_results}]\n\n")
     # print("Docs then Vecs : ")
     # print(doc_results)
     # print(vec_results)
@@ -75,10 +84,10 @@ def normalize_and_combine(doc_results: list, vec_results: list):
 
     # Normalize and shift doc results to be between 0 and 1, with 1 being best responses and 0 being worst
     if (doc_max_score != doc_min_score):
-        doc_results_normalized = [[(x - doc_min_score) / (doc_max_score - doc_min_score), y, z]
+        doc_results_normalized = [[(x - doc_min_score) / (2 * (doc_max_score - doc_min_score)), y, z]
                                   for [x, y, z] in doc_results]
     else:
-        doc_results_normalized = [[1.0, y, z]
+        doc_results_normalized = [[1, y, z]
                                   for [x, y, z] in doc_results]
 
     # Vector results assume L2 distance of unit vectors so the range is between 0 and 2.
@@ -86,6 +95,9 @@ def normalize_and_combine(doc_results: list, vec_results: list):
         # vec_results_normalized = [[(vec_max_score - x) / (vec_max_score - vec_min_score), y, z]
         #                       for [x, y, z] in vec_results]
     vec_results_normalized = [[2 - x, y, z] for [x, y, z] in vec_results]
+
+    logger.debug(f"NORMALIZED Doc Results are : {doc_results_normalized}]\n\n")
+    logger.debug(f"NORMALIZED VEC Results are : {vec_results_normalized}]\n\n")
 
     # Reward documents that contain high scoring vectors and remove the searched vector.
 
@@ -108,7 +120,7 @@ def normalize_and_combine(doc_results: list, vec_results: list):
             if (vec_text in doc_text):
                 duplicate_vec_indicies.append(vec_index)
                 # Reward documents containing text proportional to document length
-                doc_score = doc_score + ((len(doc_text) / avg_doc_len) * vec_score)
+                doc_score = doc_score + ((avg_doc_len) /(len(doc_text))  * vec_score)
             vec_index = vec_index + 1
 
         doc_results_normalized[doc_index][0] = doc_score
@@ -120,5 +132,5 @@ def normalize_and_combine(doc_results: list, vec_results: list):
 
     # Sort by descending scoring so best results come first
     doc_results_normalized.sort(key=lambda x: x[0], reverse=True)
-
+    logger.debug(f"Final Results are : {doc_results_normalized}]\n\n")
     return [(y, z) for [x, y, z] in doc_results_normalized]

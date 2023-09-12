@@ -5,6 +5,7 @@ from memas.interface.corpus import Citation, Corpus, CorpusType
 from memas.storage_driver.memas_metadata import split_corpus_pathname
 from memas.corpus.basic_corpus import BasicCorpusFactory
 from memas.corpus.corpus_searching import corpora_search
+import asyncio
 
 dataplane = Blueprint("dp", __name__, url_prefix="/dp")
 
@@ -26,7 +27,7 @@ def recollect():
         search_results.extend(corpus.search(clue=clue))
 
     # Combine the results and only take the top ones
-    search_results.sort(key=lambda x: x[0], reverse=True)
+    #search_results.sort(key=lambda x: x[0], reverse=True)
 
     # TODO : It will improve Query speed significantly to fetch citations after determining which documents to send to user
 
@@ -42,8 +43,6 @@ def remember():
 
     current_app.logger.info(f"Remembering [corpus_pathname=\"{corpus_pathname}\"] [document_name=\"{document_name}\"]")
 
-    # TODO : need to be able to fetch the corpus name for citation purposes
-    corpus_name = split_corpus_pathname(corpus_pathname)[1]
     raw_citation: str = request.json["citation"]
     citation = Citation(raw_citation["source_uri"], raw_citation["source_name"],
                         raw_citation["description"])
@@ -51,7 +50,8 @@ def remember():
     corpus_info = ctx.memas_metadata.get_corpus_info(corpus_pathname)
 
     corpus: Corpus = ctx.corpus_provider.get_corpus(corpus_info.corpus_id, corpus_type=corpus_info.corpus_type)
-    success = corpus.store_and_index(document, document_name, citation)
+    asyncRun = asyncio.run(corpus.store_and_index([(document_name, document, citation)]))
+    success = True
 
     current_app.logger.info(f"Remember finished [success={success}]")
     return {"success": success}

@@ -21,15 +21,20 @@ class LoadWikipedia(PipelineTask):
 
     def execute(self, context: PipelineContext) -> None:
         i = 0
+        info_list = []
         for row in context.pipeline_data["train"]:
             citation = memas_client.Citation(row["url"], row["title"])
             info = memas_client.CitedInformation(row["text"], citation)
 
-            success = context.dp_client.remember(self.corpus_name, info)
+            info_list.append(info)
+            # success = context.dp_client.remember(self.corpus_name, info)
 
-            assert success
+            # assert success
 
             # TODO: remove
-            # i += 1
-            # if i > 20:
-            #     return
+            i += 1
+            if i > 5000:
+                success = context.cp_client.batch_remember(self.corpus_name, info_list)
+                assert success
+                info_list = []
+                return

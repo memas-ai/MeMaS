@@ -1,7 +1,7 @@
 import logging
 from typing import Final
 from uuid import UUID
-from elasticsearch import Elasticsearch, helpers
+from elasticsearch import AsyncElasticsearch, helpers
 from memas.interface.storage_driver import CorpusDocumentStore, DocumentEntity
 
 
@@ -17,9 +17,9 @@ DOC_FIELD: Final[str] = "content"
 
 
 class ESDocumentStore(CorpusDocumentStore):
-    def __init__(self, es: Elasticsearch) -> None:
+    def __init__(self, es: AsyncElasticsearch) -> None:
         super().__init__()
-        self.es: Elasticsearch = es
+        self.es: AsyncElasticsearch = es
         self.es_index: str = CORPUS_INDEX
 
     def init(self):
@@ -47,14 +47,15 @@ class ESDocumentStore(CorpusDocumentStore):
             index=self.es_index, mappings=mapping)
         return response["acknowledged"]
 
-    def save_documents(self, id_doc_pairs: list[str, DocumentEntity]) -> bool:
+    async def save_documents(self, id_doc_pairs: list[str, DocumentEntity]) -> bool:
         # TODO : Error handling in case of failures to insert
         # TODO : Redo this to have real return (this just checks that at least one insert succeeds)
-        return helpers.bulk(self.es, self.gen_insertion_data(id_doc_pairs))[0] != 0
+        
+        await helpers.async_bulk(self.es, self.gen_insertion_data(id_doc_pairs))
 
-    def gen_insertion_data(self, id_doc_pairs: list[str, DocumentEntity]):
-        _log.debug(
-            f"Saving documents for [corpus_ids={[x[1].corpus_id for x in id_doc_pairs]}] [chunk_ids={[x[0] for x in id_doc_pairs]}]")
+    async def gen_insertion_data(self, id_doc_pairs: list[str, DocumentEntity]):
+        # _log.debug(
+        #     f"Saving documents for [corpus_ids={[x[1].corpus_id for x in id_doc_pairs]}] [chunk_ids={[x[0] for x in id_doc_pairs]}]")
         for i in range(len(id_doc_pairs)):
             yield {
                 "_index": self.es_index,

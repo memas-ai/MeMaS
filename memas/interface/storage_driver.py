@@ -131,7 +131,7 @@ class CorpusDocumentStore(StorageDriver):
         Corpus Document Store for storing and searching documents
     """
     @abstractmethod
-    def save_documents(self, chunk_id_doc_pairs: list[str, DocumentEntity]) -> bool:
+    async def save_documents(self, chunk_id_doc_pairs: list[str, DocumentEntity]) -> bool:
         """Save a set of documents into the document store
 
         Args:
@@ -168,9 +168,16 @@ class CorpusVectorStore(StorageDriver):
         """Saves a document into the vector store
 
         Args:
-            doc_entity (DocumentEntity): Document Entity object
+            doc_entities list[DocumentEntity]: List of Document Entity objects
         """
+    @abstractmethod
+    async def bulk_save_documents(self, doc_entities: list[DocumentEntity]) -> bool:
+        """Saves a set of documents into the vector store using file transfer
 
+        Args:
+            doc_entities list[DocumentEntity]: List of Document Entity objects
+        """
+        
     @abstractmethod
     def search_corpora(self, corpus_ids: list[UUID], clue: str) -> list[tuple[float, DocumentEntity, int, int]]:
         """Search set of corpora using a clue

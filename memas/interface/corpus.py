@@ -33,19 +33,18 @@ class Corpus(ABC):
         self.corpus_name = corpus_name
 
     @abstractmethod
-    def store_and_index(self, document: str, document_name: str, citation: Citation) -> bool:
-        """Store and index a "document"
+    async def store_and_index(self, doc_name_text_cit_triples : list[tuple[str, str, Citation]]) -> bool:
+        """Store and index a list of "document tuples (document_name : str, docuument_text : str, citation : Citation)"
 
         Args:
-            document (str): text block we want to store
-            citation (Citation): citation of the "document"
+            doc_name_text_cit_triples list[tuple[str, str, Citation]] : list of tuples where each tuple is (document_name, document_text, Citation)
 
         Returns:
             bool: success or not
         """
 
     @abstractmethod
-    def search(self, clue: str) -> list[tuple[float, str, Citation]]:
+    def search(self, clue: str) -> list[tuple[str, Citation]]:
         """Search for (document,citation) pairs related to the clue
 
         Args:
