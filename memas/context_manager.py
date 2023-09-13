@@ -7,7 +7,7 @@ from cassandra.cluster import Cluster, Session
 from cassandra.cqlengine import connection as c_connection
 from elasticsearch import Elasticsearch
 from pymilvus import connections as milvus_connection
-from memas.interface.exceptions import NotProperlyInitializedException
+from memas.interface.exceptions import IllegalStateException
 from memas.interface.storage_driver import CorpusDocumentMetadataStore, CorpusDocumentStore, CorpusVectorStore, MemasMetadataStore
 from memas.storage_driver import corpus_doc_metadata, corpus_doc_store, corpus_vector_store, memas_metadata
 from memas.corpus.corpus_provider import CorpusProvider
@@ -85,7 +85,7 @@ class ContextManager:
             'replication_factor': self.consts.cassandra_replication_factor
         }
         # NOTE: management.create_keyspace_simple doesn't work when we don't have a single keyspace...
-        create_keyspace_query = f"CREATE KEYSPACE IF NOT EXISTS {self.consts.cassandra_keyspace} WITH replication = {replication_options};"
+        create_keyspace_query = f"CREATE KEYSPACE {self.consts.cassandra_keyspace} WITH replication = {replication_options};"
         session.execute(create_keyspace_query)
         session.shutdown()
 
@@ -103,7 +103,7 @@ class ContextManager:
 
     def first_init_datastores(self) -> None:
         if self.es is None:
-            raise NotProperlyInitializedException("Attempted to initialize data stores before connectors/clients")
+            raise IllegalStateException("Attempted to initialize data stores before connectors/clients")
         self.corpus_doc = corpus_doc_store.ESDocumentStore(self.es)
 
         self.memas_metadata.first_init()
@@ -113,7 +113,7 @@ class ContextManager:
 
     def init_datastores(self) -> None:
         if self.es is None:
-            raise NotProperlyInitializedException("Attempted to initialize data stores before connectors/clients")
+            raise IllegalStateException("Attempted to initialize data stores before connectors/clients")
         self.corpus_doc = corpus_doc_store.ESDocumentStore(self.es)
 
         self.memas_metadata.init()
