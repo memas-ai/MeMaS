@@ -34,15 +34,11 @@ def create_corpus():
 
 @controlplane.route('/batch_memorize',methods=["POST"])
 def batch_memorize():
-    
-    #current_app.logger.info(f"memorize")
     corpus_pathname:str = request.json["corpus_pathname"]
     cited_documents: list = request.json["cited_documents"]
-    
-    #current_app.logger.info(f"corpus_pathname {corpus_pathname}]")
     corpus_info = ctx.memas_metadata.get_corpus_info(corpus_pathname)
     
-    current_app.logger.info(f"Batch memorize information in corpus_pathname {corpus_pathname}]")
+    current_app.logger.info(f"Batch memorize information in [corpus_pathname= \"{corpus_pathname}\"]")
     success=True
     for dict in cited_documents: #document_name must exist here
         document=dict.get("document","")
