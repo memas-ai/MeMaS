@@ -7,6 +7,7 @@ from cassandra.cluster import Cluster, Session
 from cassandra.cqlengine import connection as c_connection
 from elasticsearch import Elasticsearch
 from pymilvus import connections as milvus_connection
+from memas.encoder.universal_sentence_encoder import USETextEncoder
 from memas.interface.exceptions import IllegalStateException
 from memas.interface.storage_driver import CorpusDocumentMetadataStore, CorpusDocumentStore, CorpusVectorStore, MemasMetadataStore
 from memas.storage_driver import corpus_doc_metadata, corpus_doc_store, corpus_vector_store, memas_metadata
@@ -64,7 +65,7 @@ class ContextManager:
         # Data Stores
         self.memas_metadata: MemasMetadataStore = memas_metadata.SINGLETON
         self.corpus_metadata: CorpusDocumentMetadataStore = corpus_doc_metadata.SINGLETON
-        self.corpus_vec: CorpusVectorStore = corpus_vector_store.SINGLETON
+        self.corpus_vec: CorpusVectorStore = corpus_vector_store.MilvusSentenceVectorStore(USETextEncoder())
         self.corpus_doc: CorpusDocumentStore
 
         # clients

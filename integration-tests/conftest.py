@@ -14,7 +14,7 @@ from memas.storage_driver import corpus_doc_store, corpus_vector_store
 # TODO: properly create different sets of configs and load them according to scenario
 
 corpus_doc_store.CORPUS_INDEX = "memas-integ-test"
-corpus_vector_store.USE_COLLECTION_NAME = "memas_USE_integ_test"
+corpus_vector_store.ENCODER_COLLECTION_NAME = "memas_{encoder}_integ_test"
 
 
 CONFIG_PATH = "../integration-tests/integ-test-config.yml"
@@ -33,7 +33,7 @@ def clean_resources():
 
     try:
         milvus_connection.connect("default", host=constants.milvus_ip, port=constants.milvus_port)
-        utility.drop_collection(collection_name=corpus_vector_store.USE_COLLECTION_NAME)
+        utility.drop_collection(collection_name=corpus_vector_store.ENCODER_COLLECTION_NAME.format(encoder="USE"))
         milvus_connection.disconnect("default")
     except Exception:
         pass

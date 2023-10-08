@@ -1,10 +1,11 @@
 import numpy as np
 import uuid
 import time
+from memas.encoder.universal_sentence_encoder import USETextEncoder
 from memas.interface.storage_driver import DocumentEntity
-from memas.storage_driver.corpus_vector_store import MilvusUSESentenceVectorStore
+from memas.storage_driver.corpus_vector_store import MilvusSentenceVectorStore
 
-store = MilvusUSESentenceVectorStore()
+store = MilvusSentenceVectorStore(USETextEncoder())
 
 
 def test_init():
