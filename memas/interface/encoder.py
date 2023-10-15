@@ -3,6 +3,10 @@ import numpy
 
 
 class TextEncoder(ABC):
+    def __init__(self, ENCODER_NAME: str, VECTOR_DIMENSION: int) -> None:
+        self.ENCODER_NAME: str = ENCODER_NAME
+        self.VECTOR_DIMENSION: str = VECTOR_DIMENSION
+
     @abstractmethod
     def init(self):
         """Initialize the encoder
