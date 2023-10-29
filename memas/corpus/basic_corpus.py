@@ -1,7 +1,7 @@
 # from search_redirect import SearchSettings
 import logging
 import uuid
-from memas.interface.corpus import Corpus, CorpusFactory
+from memas.interface.corpus import Corpus, CorpusInfo, CorpusFactory
 from memas.interface.corpus import Citation
 from memas.interface.storage_driver import CorpusDocumentMetadataStore, CorpusDocumentStore, CorpusVectorStore, DocumentEntity
 from memas.interface.exceptions import SentenceLengthOverflowException
@@ -15,8 +15,8 @@ _log = logging.getLogger(__name__)
 
 class BasicCorpus(Corpus):
 
-    def __init__(self, corpus_id: uuid.UUID, corpus_name: str, metadata_store: CorpusDocumentMetadataStore, doc_store: CorpusDocumentStore, vec_store: CorpusVectorStore):
-        super().__init__(corpus_id, corpus_name)
+    def __init__(self, corpus_info: CorpusInfo, metadata_store: CorpusDocumentMetadataStore, doc_store: CorpusDocumentStore, vec_store: CorpusVectorStore):
+        super().__init__(corpus_info)
         self.metadata_store: CorpusDocumentMetadataStore = metadata_store
         self.doc_store: CorpusDocumentStore = doc_store
         self.vec_store: CorpusVectorStore = vec_store
@@ -101,6 +101,12 @@ class BasicCorpus(Corpus):
 
         return results
 
+    def delete_all_content(self):
+        # TODO: parallelize
+        self.metadata_store.delete_corpus(self.corpus_id)
+        self.doc_store.delete_corpus(self.corpus_id)
+        self.vec_store.delete_corpus(self.corpus_id)
+
 
 class BasicCorpusFactory(CorpusFactory):
     def __init__(self, metadata_store: CorpusDocumentMetadataStore, doc_store: CorpusDocumentStore, vec_store: CorpusVectorStore) -> None:
@@ -109,6 +115,5 @@ class BasicCorpusFactory(CorpusFactory):
         self.doc_store: CorpusDocumentStore = doc_store
         self.vec_store: CorpusVectorStore = vec_store
 
-    def produce(self, corpus_id: uuid.UUID):
-        # TODO: Maybe change the Corpus Name Parameter
-        return BasicCorpus(corpus_id, "BasicCorpus", self.metadata_store, self.doc_store, self.vec_store)
+    def produce(self, corpus_info: CorpusInfo):
+        return BasicCorpus(corpus_info, self.metadata_store, self.doc_store, self.vec_store)

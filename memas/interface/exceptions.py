@@ -1,4 +1,5 @@
 from enum import Enum
+from uuid import UUID
 
 
 class MemasInternalException(Exception):
@@ -29,6 +30,7 @@ class ErrorCode(Enum):
     NamespaceExists = "namespace_exists"
     NamespaceDoesNotExist = "namespace_does_not_exist"
     NamespaceIllegalName = "namespace_illegal_name"
+    NamespaceDeleting = "namespace_deleting"
 
 
 class MemasException(Exception):
@@ -65,4 +67,9 @@ class NamespaceDoesNotExistException(MemasException):
 # TODO: properly specify this exception type
 class SentenceLengthOverflowException(Exception):
     def __init__(self, sentence_len: int) -> None:
-        super().__init__("Sentence length is {len} which exceededs limit".format(len=sentence_len))
+        super().__init__(f"Sentence length is {sentence_len} which exceededs limit")
+
+
+class DocumentMetadataNotFound(IllegalStateException):
+    def __init__(self, corpus_id: UUID, document_id: UUID) -> None:
+        super().__init__(f"Document metadata not found for [corpus_id={corpus_id}] [document_id={document_id}]")

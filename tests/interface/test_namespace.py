@@ -1,26 +1,54 @@
 import pytest
-from memas.interface.namespace import is_pathname_format_valid, is_name_format_valid
+from memas.interface.namespace import is_namespace_pathname_valid, is_corpus_pathname_valid, is_name_format_valid, mangle_corpus_pathname
+
+
+@pytest.mark.parametrize("parent_pathname, corpus_name, expected_pathname", [
+    ("aaa.bbb", "ccc", "aaa.bbb:ccc"),
+])
+def test_mangle_corpus_pathname(parent_pathname, corpus_name, expected_pathname):
+    assert mangle_corpus_pathname(parent_pathname, corpus_name) == expected_pathname
 
 
 @pytest.mark.parametrize("pathname", [
     "aaa.bbb.ccc",  # most standard namespace
-    "a.bb:ccc",  # most standard corpus
-    ":corpus",  # root level corpus
     "",  # The empty string namespace is the reserved root namespace
     "c",  # Single character names are allowed
     "AFD.my.namespace"  # capital case is allowed
 ])
-def test_pathname_format_valid(pathname):
-    assert is_pathname_format_valid(pathname)
+def test_namespace_pathname_format_valid(pathname):
+    assert is_namespace_pathname_valid(pathname)
+
+
+@pytest.mark.parametrize("pathname", [
+    "a.bb:ccc",  # most standard corpus
+    ":corpus",  # root level corpus
+])
+def test_corpus_pathname_format_valid(pathname):
+    assert is_corpus_pathname_valid(pathname)
 
 
 @pytest.mark.parametrize("pathname", [
     "x y",  # No spaces allowed
     "this,is\"also;bad",  # no weird separators
     "a..b",  # only the root namespace can be empty
+    "a.bb:ccc",  # most standard corpus
+    ":corpus",  # root level corpus
 ])
-def test_pathname_format_invalid(pathname):
-    assert not is_pathname_format_valid(pathname)
+def test_namespace_pathname_format_invalid(pathname):
+    assert not is_namespace_pathname_valid(pathname)
+
+
+@pytest.mark.parametrize("pathname", [
+    "x y",  # No spaces allowed
+    "this,is\"also;bad",  # no weird separators
+    "a..b",  # only the root namespace can be empty
+    "aaa.bbb.ccc",  # most standard namespace
+    "",  # The empty string namespace is the reserved root namespace
+    "c",  # Single character names are allowed
+    "AFD.my.namespace"  # capital case is allowed
+])
+def test_corpus_pathname_format_invalid(pathname):
+    assert not is_corpus_pathname_valid(pathname)
 
 
 @pytest.mark.parametrize("name", [

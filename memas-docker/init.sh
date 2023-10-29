@@ -25,5 +25,5 @@ if [ ! -e /memas/first-init.lock ]
 then
     # If initialization succeeded, create the lock file, and write our current version to it
     # FIXME: is running flask instead of gunicorn a security concern? Gunicorn keeps on trying to restart the worker thread despite we're intentionally exiting
-    flask --app "memas.app:create_app(config_filename=\"$conf_file\", first_init=True)" run && touch /memas/first-init.lock; echo $version > /memas/first-init.lock
+    flask --app "memas.app:create_app(first_init=True)" run && touch /memas/first-init.lock; echo $version > /memas/first-init.lock
 fi

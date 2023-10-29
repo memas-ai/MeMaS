@@ -3,7 +3,9 @@ import logging
 from uuid import UUID
 from cassandra.cqlengine import columns, management
 from cassandra.cqlengine.models import Model
+from cassandra.cqlengine.query import DoesNotExist
 from memas.interface.corpus import Citation
+from memas.interface.exceptions import DocumentMetadataNotFound
 from memas.interface.storage_driver import CorpusDocumentMetadataStore
 
 
@@ -17,7 +19,6 @@ class DocumentMetadata(Model):
     document_name = columns.Text()
     source_name = columns.Text()
     source_uri = columns.Text()
-    corpus_name = columns.Text()
     description = columns.Text()
     segment_count = columns.Integer()
     added_at = columns.DateTime(required=True)
@@ -54,7 +55,7 @@ class CorpusDocumentMetadataStoreImpl(CorpusDocumentMetadataStore):
                                 added_at=datetime.now())
         return True
 
-    def get_document_citation(self, corpus_id: UUID, document_id: UUID) -> Citation:
+    def get_document_citation(self, corpus_id: UUID, document_id: UUID) -> [Citation | None]:
         """Retrieves the document citation
 
         Args:
@@ -65,8 +66,11 @@ class CorpusDocumentMetadataStoreImpl(CorpusDocumentMetadataStore):
             Citation: Citation object of the document
         """
         _log.debug(f"Retrieving document citation for [corpus_id={corpus_id.hex}] [document_id={document_id.hex}]")
-        result = DocumentMetadata.get(
-            corpus_id=corpus_id, document_id=document_id)
+        try:
+            result = DocumentMetadata.get(corpus_id=corpus_id, document_id=document_id)
+        except DoesNotExist as e:
+            _log.error(f"Document citation not found for [corpus_id={corpus_id.hex}] [document_id={document_id.hex}]")
+            raise DocumentMetadataNotFound(corpus_id, document_id) from e
         return Citation(source_uri=result.source_uri,
                         source_name=result.source_name,
                         description=result.description,
@@ -84,6 +88,10 @@ class CorpusDocumentMetadataStoreImpl(CorpusDocumentMetadataStore):
         """
         _log.debug(f"Retrieving document segment count for [corpus_id={corpus_id.hex}] [document_id={document_id.hex}]")
         return DocumentMetadata.get(corpus_id=corpus_id, document_id=document_id).segment_count
+
+    def delete_corpus(self, corpus_id: UUID):
+        # This is surprisingly efficient based on: https://stackoverflow.com/a/43341522
+        DocumentMetadata.filter(corpus_id=corpus_id).delete()
 
 
 SINGLETON: CorpusDocumentMetadataStore = CorpusDocumentMetadataStoreImpl()

@@ -20,18 +20,22 @@ class Citation:
 @dataclass
 class CorpusInfo:
     corpus_pathname: str
+    namespace_id: UUID
     corpus_id: UUID
     corpus_type: CorpusType
+
+    def __hash__(self) -> int:
+        return hash((self.namespace_id, self.corpus_id, self.corpus_pathname))
 
 
 class Corpus(ABC):
     """
-    Corpus interface used to hide the different implementations
+    Corpus interface used to access data within the corpus, and hide the different implementations
     """
 
-    def __init__(self, corpus_id: UUID, corpus_name: str):
-        self.corpus_id: UUID = corpus_id
-        self.corpus_name: str = corpus_name
+    def __init__(self, corpus_info: CorpusInfo):
+        self.corpus_id: UUID = corpus_info.corpus_id
+        self.corpus_info: CorpusInfo = corpus_info
 
     @abstractmethod
     def store_and_index(self, document: str, citation: Citation) -> bool:
@@ -56,9 +60,14 @@ class Corpus(ABC):
             list[tuple[str, Citation]]: a list of (document, citation) pairs
         """
 
+    @abstractmethod
+    def delete_all_content(self):
+        """Deletes all data in the corpus
+        """
+
 
 class CorpusFactory(ABC):
     @abstractmethod
-    def produce(self, corpus_id: UUID):
+    def produce(self, corpus_info: CorpusInfo):
         # FIXME: do we want to pass in any arguments?
         pass

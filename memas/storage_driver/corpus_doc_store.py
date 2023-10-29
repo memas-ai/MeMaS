@@ -93,3 +93,18 @@ class ESDocumentStore(CorpusDocumentStore):
                 hit["_id"][:32]), document_name=data[NAME_FIELD], document=data[DOC_FIELD])))
 
         return result
+
+    def delete_corpus(self, corpus_id: UUID):
+        _log.debug(f"Deleting documents for [corpus_id={corpus_id}]")
+        delete_query = {
+            "bool": {
+                "filter": [
+                    {"term":  {CORPUS_FIELD: corpus_id.hex}}
+                ]
+            }
+        }
+        response = self.es.delete_by_query(index=self.es_index, query=delete_query)
+        # TODO: add retry/error handling
+        assert not response["timed_out"]
+        _log.debug(
+            f"Corpus Metadata Deletion took {response['took']}ms, total {response['total']} entries, deleted {response['deleted']} entries.")

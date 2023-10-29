@@ -12,7 +12,7 @@ def test_init():
     store.init()
 
 
-def test_save_then_search2():
+def test_save_then_search():
     print("before UIDs")
     corpus_id1 = uuid.uuid4()
     corpus_id2 = uuid.uuid4()
@@ -46,3 +46,27 @@ def test_save_then_search2():
 
     # Test that the document stored in the other corpus isn't a result
     assert document_id3 not in {t[1].document_id for t in result}
+
+
+def test_delete_corpus():
+    corpus_id1 = uuid.uuid4()
+    document_id0 = uuid.uuid4()
+    document_id1 = uuid.uuid4()
+    document_id2 = uuid.uuid4()
+
+    best_match_str = "The sun is high. California sunshine is great. "
+
+    store.save_documents([DocumentEntity(corpus_id1, document_id0, "doc0",
+                                         "Before This is a runon sentence meant to test the logic of the splitting capabilites but that is only the start, there is nothing that can break this sentecne up other than some handy logic even in the worst case, too bad I only know how to use commas")])
+    store.save_documents([DocumentEntity(corpus_id1, document_id1, "doc1",
+                                         "The sun is high! California sunshine is great. Did you catch my quest? Oh oh! lol")])
+    store.save_documents([DocumentEntity(corpus_id1, document_id2, "doc2",
+                                         "I picked up my phone and then dropped it again")])
+    time.sleep(1)
+
+    store.delete_corpus(corpus_id1)
+    time.sleep(1)
+
+    result = store.search_corpora([corpus_id1], "How's the weather today?")
+
+    assert len(result) == 0

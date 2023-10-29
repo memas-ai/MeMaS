@@ -1,11 +1,8 @@
 from dataclasses import dataclass
 import logging
-import numpy as np
-import re
-import time
 import uuid
+import numpy as np
 from pymilvus import (
-    connections,
     FieldSchema,
     CollectionSchema,
     DataType,
@@ -44,7 +41,15 @@ class MilvusSentenceObject:
     end_index: int
 
     def to_data(self):
-        return [[self.composite_id], [self.corpus_id], [self.document_name], [self.text_preview], self.embedding, [self.start_index], [self.end_index]]
+        return [
+            [self.composite_id],
+            [self.corpus_id],
+            [self.document_name],
+            [self.text_preview],
+            self.embedding,
+            [self.start_index],
+            [self.end_index]
+        ]
 
 
 def hash_sentence_id(document_id: uuid.UUID, sentence: str) -> uuid.UUID:
@@ -52,7 +57,8 @@ def hash_sentence_id(document_id: uuid.UUID, sentence: str) -> uuid.UUID:
 
 
 def convert_batch(objects: list[MilvusSentenceObject]):
-    composite_ids, corpus_ids, document_names, text_previews, embeddings, start_indices, end_indices = [], [], [], [], [], [], []
+    composite_ids, corpus_ids, document_names = [], [], []
+    text_previews, embeddings, start_indices, end_indices = [], [], [], []
     for obj in objects:
         composite_ids.append(obj.composite_id)
         corpus_ids.append(obj.corpus_id)
@@ -155,3 +161,6 @@ class MilvusSentenceVectorStore(CorpusVectorStore):
             insert_count = insert_count + self.collection.insert(convert_batch(objects)).insert_count
 
         return insert_count == sentence_count
+
+    def delete_corpus(self, corpus_id: uuid.UUID):
+        self.collection.delete(f"{CORPUS_FIELD} == \"{corpus_id.hex}\"")

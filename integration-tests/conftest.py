@@ -6,8 +6,8 @@ from pymilvus import utility
 from pymilvus import connections as milvus_connection
 from elasticsearch import Elasticsearch
 from flask import Flask, Config
+from memas import context_manager
 from memas.app import create_app
-from memas.context_manager import ctx, EnvironmentConstants, read_env
 from memas.storage_driver import corpus_doc_store, corpus_vector_store
 
 
@@ -23,7 +23,7 @@ CONFIG_PATH = "../integration-tests/integ-test-config.yml"
 def clean_resources():
     config = Config(os.getcwd() + "/memas/")
     config.from_file(CONFIG_PATH, load=yaml.safe_load)
-    constants = EnvironmentConstants(config)
+    constants = context_manager.EnvironmentConstants(config)
 
     try:
         connection.setup([constants.cassandra_ip], "system", protocol_version=4)
@@ -54,9 +54,9 @@ def create_test_app():
     # first init to setup
     with pytest.raises(SystemExit):
         # Note that first init should exit after initializing. So we need to catch and verify
-        create_app(CONFIG_PATH, first_init=True)
+        create_app(config_filename=CONFIG_PATH, first_init=True)
 
-    app = create_app(CONFIG_PATH)
+    app = create_app(config_filename=CONFIG_PATH)
 
     return app
 
@@ -72,4 +72,10 @@ def test_client():
 @pytest.fixture
 def es_client():
     with app.app_context():
-        yield ctx.es
+        yield context_manager.ctx.es
+
+
+@pytest.fixture
+def ctx():
+    with app.app_context():
+        yield context_manager.ctx

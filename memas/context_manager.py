@@ -122,7 +122,8 @@ class ContextManager:
         self.corpus_vec.init()
         self.corpus_doc.init()
 
-        self.corpus_provider = CorpusProvider(self.corpus_metadata, self.corpus_doc, self.corpus_vec)
+        self.corpus_provider = CorpusProvider(
+            self.memas_metadata, self.corpus_metadata, self.corpus_doc, self.corpus_vec)
 
     def init(self) -> None:
         self.init_clients()
