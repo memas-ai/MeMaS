@@ -11,3 +11,8 @@ ELASTICSEARCH:
 MILVUS:
   ip: "milvus-standalone"
   port: 19530
+
+CELERY:
+  broker_url: "redis://redis"
+  result_backend: "redis://redis"
+  task_ignore_result: True

@@ -1,14 +1,30 @@
 from datetime import datetime
+from enum import Enum
 import logging
 from typing import Final
 import uuid
+from uuid import UUID
+from cassandra import ConsistencyLevel
 from cassandra.cqlengine import columns, management
 from cassandra.cqlengine.models import Model
 from cassandra.cqlengine.query import BatchQuery, DoesNotExist, LWTException
 from memas.interface import corpus
-from memas.interface.corpus import CorpusType
-from memas.interface.exceptions import IllegalNameException, NamespaceDoesNotExistException, NamespaceExistsException
-from memas.interface.namespace import ROOT_ID, ROOT_NAME, NAMESPACE_SEPARATOR, CORPUS_SEPARATOR, is_pathname_format_valid, is_name_format_valid
+from memas.interface.corpus import CorpusInfo, CorpusType
+from memas.interface.exceptions import (
+    IllegalNameException,
+    IllegalStateException,
+    NamespaceDoesNotExistException,
+    NamespaceExistsException
+)
+from memas.interface.namespace import (
+    ROOT_ID,
+    ROOT_NAME,
+    NAMESPACE_SEPARATOR,
+    CORPUS_SEPARATOR,
+    is_corpus_pathname_valid,
+    is_namespace_pathname_valid,
+    mangle_corpus_pathname
+)
 from memas.interface.storage_driver import MemasMetadataStore
 
 
@@ -26,6 +42,10 @@ MAX_CORPUS_NAME_LENGTH: Final[int] = MAX_SEGMENT_LENGTH - 1
 STD_READ_PERMISSION: Final[int] = 1
 STD_WRITE_PERMISSION: Final[int] = 2
 READ_AND_WRITE: Final[int] = STD_READ_PERMISSION & STD_WRITE_PERMISSION
+
+
+class NamespaceStatus(Enum):
+    DELETING = "deleting"
 
 
 class NamespaceNameToId(Model):
@@ -52,12 +72,14 @@ class NamespaceInfo(Model):
     parent_id = columns.UUID(partition_key=True)
     namespace_id = columns.UUID(primary_key=True)
 
-    parent_path = columns.Ascii(required=True, max_length=MAX_PATH_LENGTH - MAX_SEGMENT_LENGTH, min_length=0)
+    parent_pathname = columns.Ascii(required=True, max_length=MAX_PATH_LENGTH - MAX_SEGMENT_LENGTH, min_length=0)
     namespace_name = columns.Ascii(required=True, max_length=MAX_NS_NAME_LENGTH)
     # Default set of (shared) corpora that is queried. This won't include the direct child corpora
     #   of this namespace, since those will always be queried unless specified otherwise.
-    query_default_corpus = columns.Set(columns.UUID, default=set())
+    # This set stores strings that are the concatenation of "{namespace_id}:{corpus_id}"
+    query_default_corpus = columns.Set(columns.Ascii, default=set())
     created_at = columns.DateTime(required=True)
+    status = columns.Ascii()
 
 
 class CorpusInfo(Model):
@@ -67,10 +89,12 @@ class CorpusInfo(Model):
     parent_id = columns.UUID(partition_key=True)
     corpus_id = columns.UUID(primary_key=True)
 
+    parent_pathname = columns.Ascii(required=True, max_length=MAX_PATH_LENGTH - MAX_SEGMENT_LENGTH, min_length=0)
     corpus_name = columns.Ascii(required=True, max_length=MAX_CORPUS_NAME_LENGTH)
     corpus_type = columns.Ascii(required=True)
     permissions = columns.Integer(required=True)
     created_at = columns.DateTime(required=True)
+    status = columns.Ascii()
 
 
 def split_namespace_pathname(pathname: str) -> tuple[str, str]:
@@ -82,6 +106,8 @@ def split_namespace_pathname(pathname: str) -> tuple[str, str]:
     Returns:
         tuple[str, str]: (parent_pathname, namespace_name) pair
     """
+    if not is_namespace_pathname_valid(pathname):
+        raise IllegalNameException(pathname)
     tokens = pathname.rsplit(NAMESPACE_SEPARATOR, 1)
     if len(tokens) == 1:
         return (ROOT_NAME, pathname)
@@ -97,9 +123,10 @@ def split_corpus_pathname(corpus_pathname: str) -> tuple[str, str]:
     Returns:
         tuple[str, str]: (parent_pathname, corpus_name) pair
     """
-    tokens = corpus_pathname.split(CORPUS_SEPARATOR)
-    if len(tokens) != 2:
+    if not is_corpus_pathname_valid(corpus_pathname):
         raise IllegalNameException(corpus_pathname)
+
+    tokens = corpus_pathname.split(CORPUS_SEPARATOR)
     return (tokens[0], tokens[1])
 
 
@@ -124,12 +151,14 @@ class MemasMetadataStoreImpl(MemasMetadataStore):
             raise NamespaceDoesNotExistException(fullname) from e
         return result.id
 
-    def _get_ids_by_name(self, fullname: str) -> tuple[uuid.UUID, uuid.UUID]:
-        if CORPUS_SEPARATOR in fullname:
-            parent_pathname, child_name = split_corpus_pathname(fullname)
-        else:
-            parent_pathname, child_name = split_namespace_pathname(fullname)
+    def get_corpus_ids_by_name(self, fullname: str) -> tuple[uuid.UUID, uuid.UUID]:
+        parent_pathname, _ = split_corpus_pathname(fullname)
+        child_id = self._get_id_by_name(fullname=fullname)
+        parent_id = self._get_id_by_name(fullname=parent_pathname)
+        return (parent_id, child_id)
 
+    def get_namespace_ids_by_name(self, fullname: str) -> tuple[uuid.UUID, uuid.UUID]:
+        parent_pathname, _ = split_namespace_pathname(fullname)
         child_id = self._get_id_by_name(fullname=fullname)
         parent_id = self._get_id_by_name(fullname=parent_pathname)
         return (parent_id, child_id)
@@ -139,8 +168,6 @@ class MemasMetadataStoreImpl(MemasMetadataStore):
 
         if namespace_pathname == ROOT_NAME:
             raise NamespaceExistsException(namespace_pathname, "\"\" is reserved for the root namespace!")
-        if not is_pathname_format_valid(namespace_pathname):
-            raise IllegalNameException(namespace_pathname)
 
         parent_pathname, child_name = split_namespace_pathname(namespace_pathname)
         if parent_id is None:
@@ -162,7 +189,7 @@ class MemasMetadataStoreImpl(MemasMetadataStore):
         with BatchQuery() as batch_query:
             NamespaceInfo.batch(batch_query).create(
                 parent_id=parent_id, namespace_id=namespace_id,
-                parent_path=parent_pathname, namespace_name=child_name, created_at=now)
+                parent_pathname=parent_pathname, namespace_name=child_name, created_at=now)
             NamespaceParent.batch(batch_query).create(child_id=namespace_id, parent_id=parent_id)
 
         return namespace_id
@@ -171,9 +198,6 @@ class MemasMetadataStoreImpl(MemasMetadataStore):
         _log.debug(f"Creating corpus for [corpus_pathname=\"{corpus_pathname}\"] [corpus_type={corpus_type}]")
 
         parent_pathname, corpus_name = split_corpus_pathname(corpus_pathname)
-        if not is_pathname_format_valid(parent_pathname) or not is_name_format_valid(corpus_name):
-            raise IllegalNameException(corpus_pathname)
-
         if parent_id is None:
             parent_id = self._get_id_by_name(parent_pathname)
 
@@ -188,7 +212,7 @@ class MemasMetadataStoreImpl(MemasMetadataStore):
         # FIXME: Same issue with namespace id colliding.
         with BatchQuery() as batch_query:
             CorpusInfo.batch(batch_query).create(
-                parent_id=parent_id, corpus_id=corpus_id, corpus_name=corpus_name,
+                parent_id=parent_id, corpus_id=corpus_id, parent_pathname=parent_pathname, corpus_name=corpus_name,
                 corpus_type=corpus_type.value, permissions=permissions, created_at=now)
             NamespaceParent.batch(batch_query).create(child_id=corpus_id, parent_id=parent_id)
         return corpus_id
@@ -201,19 +225,73 @@ class MemasMetadataStoreImpl(MemasMetadataStore):
         return self.create_corpus(corpus_pathname=corpus_pathname, corpus_type=CorpusType.KNOWLEDGE,
                                   permissions=STD_READ_PERMISSION, parent_id=parent_id)
 
-    def get_query_corpora(self, namespace_pathname: str) -> set[uuid.UUID]:
-        parent_id, namespace_id = self._get_ids_by_name(namespace_pathname)
-        namespace_result = NamespaceInfo.get(parent_id=parent_id, namespace_id=namespace_id)
-        query_corpora = set(namespace_result.query_default_corpus)
+    def initiate_delete_corpus(self, parent_id: UUID, corpus_id: UUID, corpus_pathname: str):
+        _log.debug(f"Initiating delete corpus for [corpus_pathname=\"{corpus_pathname}\"] [corpus_id={corpus_id.hex}]")
+        try:
+            NamespaceNameToId.objects(fullname=corpus_pathname).consistency(
+                ConsistencyLevel.QUORUM).iff(id=corpus_id).delete()
+        except LWTException as e:
+            _log.info(f"Corpus already deleted [corpus_pathname=\"{corpus_pathname}\"] [corpus_id={corpus_id.hex}]")
+            raise NamespaceDoesNotExistException("corpus_pathname") from e
 
-        for corpora_result in CorpusInfo.filter(parent_id=namespace_id).all():
-            query_corpora.add(corpora_result.corpus_id)
-        return query_corpora
+        try:
+            CorpusInfo.objects(parent_id=parent_id, corpus_id=corpus_id).if_exists().update(
+                status=NamespaceStatus.DELETING.value)
+        except LWTException as e:
+            _log.error(f"CorpusInfo already deleted [parent_id=\"{parent_id.hex}\"] [corpus_id={corpus_id.hex}]")
+            raise IllegalStateException("CorpusInfo already deleted but NamespaceNameToId wasn't") from e
+
+    def finish_delete_corpus(self, namespace_id: UUID, corpus_id: UUID):
+        # truly delete the remaining metadata of the corpus. Note that the NamespaceNameToId entry should be deleted prior to this call
+        with BatchQuery() as batch_query:
+            CorpusInfo.batch(batch_query).filter(parent_id=namespace_id, corpus_id=corpus_id).delete()
+            NamespaceParent.batch(batch_query).filter(child_id=corpus_id).delete()
+
+    def get_query_corpora(self, namespace_pathname: str) -> set[corpus.CorpusInfo]:
+        parent_id, namespace_id = self.get_namespace_ids_by_name(namespace_pathname)
+        namespace_result = NamespaceInfo.get(parent_id=parent_id, namespace_id=namespace_id)
+        query_corpuses = set()
+        deleted_corpuses = set()
+        for composite_id in set(namespace_result.query_default_corpus):
+            # the composite id is a composition of "{namespace_id}:{corpus_id}"
+            namespace_hex, corpus_hex = composite_id.split(":")
+            namespace_id = uuid.UUID(namespace_hex)
+            corpus_id = uuid.UUID(corpus_hex)
+            try:
+                corpus_info = self.get_corpus_info_by_id(namespace_id, corpus_id)
+            except IllegalStateException as err:
+                deleted_corpuses.add(composite_id)
+            query_corpuses.add(corpus_info)
+        # for corpuses not found, this means they were deleted. Update the set to remove this
+        if deleted_corpuses:
+            new_query_set = set(namespace_result.query_default_corpus).difference(deleted_corpuses)
+            NamespaceInfo.objects(parent_id=parent_id, namespace_id=namespace_id).update(
+                query_default_corpus=new_query_set)
+
+        for result in CorpusInfo.filter(parent_id=namespace_id).all():
+            corpus_pathname = mangle_corpus_pathname(result.parent_pathname, result.corpus_name)
+            corpus_info = corpus.CorpusInfo(corpus_pathname=corpus_pathname, namespace_id=result.parent_id,
+                                            corpus_id=result.corpus_id, corpus_type=CorpusType(result.corpus_type))
+            query_corpuses.add(corpus_info)
+        return query_corpuses
 
     def get_corpus_info(self, corpus_pathname: str) -> corpus.CorpusInfo:
-        parent_id, corpus_id = self._get_ids_by_name(corpus_pathname)
-        result = CorpusInfo.get(parent_id=parent_id, corpus_id=corpus_id)
-        return corpus.CorpusInfo(corpus_pathname=corpus_pathname, corpus_id=corpus_id, corpus_type=CorpusType(result.corpus_type))
+        parent_id, corpus_id = self.get_corpus_ids_by_name(corpus_pathname)
+        corpus_info = self.get_corpus_info_by_id(parent_id, corpus_id)
+        if corpus_info.corpus_pathname != corpus_pathname:
+            raise IllegalStateException(
+                f"Inconsistent CorpusInfo vs NamespacePathname, \"{corpus_info.corpus_pathname}\"!=\"{corpus_pathname}\"")
+        return corpus_info
+
+    def get_corpus_info_by_id(self, namespace_id: UUID, corpus_id: UUID) -> corpus.CorpusInfo:
+        try:
+            corpus_info = CorpusInfo.get(parent_id=namespace_id, corpus_id=corpus_id)
+        except DoesNotExist as ignored:
+            # TODO: Maybe free up the name in this case?
+            raise IllegalStateException("Corpus creation or delete incomplete")
+
+        corpus_pathname = mangle_corpus_pathname(corpus_info.parent_pathname, corpus_info.corpus_name)
+        return corpus.CorpusInfo(corpus_pathname=corpus_pathname, namespace_id=namespace_id, corpus_id=corpus_id, corpus_type=CorpusType(corpus_info.corpus_type))
 
 
 SINGLETON: MemasMetadataStore = MemasMetadataStoreImpl()

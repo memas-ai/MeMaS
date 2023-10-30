@@ -14,13 +14,12 @@ def recall():
 
     current_app.logger.info(f"Recalling [namespace_pathname=\"{namespace_pathname}\"]")
 
-    corpus_ids = ctx.memas_metadata.get_query_corpora(namespace_pathname)
+    corpus_infos = ctx.memas_metadata.get_query_corpora(namespace_pathname)
 
-    current_app.logger.debug(f"Querying corpuses: {corpus_ids}")
+    current_app.logger.debug(f"Querying corpuses: {corpus_infos}")
     search_results: list[tuple[str, Citation]] = []
-    for corpus_id in corpus_ids:
-        # TODO: either provide corpus_type or namespace_pathname
-        corpus: Corpus = ctx.corpus_provider.get_corpus(corpus_id, corpus_type=CorpusType.KNOWLEDGE)
+    for corpus_info in corpus_infos:
+        corpus: Corpus = ctx.corpus_provider.get_corpus_by_info(corpus_info)
         search_results.extend(corpus.search(clue=clue))
 
     # Combine the results and only take the top ones
@@ -47,9 +46,7 @@ def memorize():
                         description=raw_citation.get("description", ""),
                         document_name=document_name)
 
-    corpus_info = ctx.memas_metadata.get_corpus_info(corpus_pathname)
-
-    corpus: Corpus = ctx.corpus_provider.get_corpus(corpus_info.corpus_id, corpus_type=corpus_info.corpus_type)
+    corpus: Corpus = ctx.corpus_provider.get_corpus_by_name(corpus_pathname)
     success = corpus.store_and_index(document, citation)
 
     current_app.logger.info(f"Memorize finished [success={success}]")

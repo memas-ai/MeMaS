@@ -7,13 +7,13 @@ import uuid
 import time
 
 
-def test_init(es_client: Elasticsearch):
-    doc_store = corpus_doc_store.ESDocumentStore(es_client)
+def test_init(ctx: ContextManager):
+    doc_store = corpus_doc_store.ESDocumentStore(ctx.es)
     doc_store.init()
 
 
-def test_save_then_search(es_client):
-    doc_store = corpus_doc_store.ESDocumentStore(es_client)
+def test_save_then_search(ctx: ContextManager):
+    doc_store = corpus_doc_store.ESDocumentStore(ctx.es)
     doc_store.init()
 
     corpus_id1 = uuid.uuid1()

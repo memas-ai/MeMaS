@@ -24,8 +24,30 @@ class StorageDriver(ABC):
 class MemasMetadataStore(StorageDriver):
     """
         Memas metadata store providing basic namespace level operations for managing 
-        the namespace related data
+        the namespace related metadata
     """
+
+    @abstractmethod
+    def get_namespace_ids_by_name(self, fullname: str) -> tuple[UUID, UUID]:
+        """Retrieve the parent and child namespace_id from the pathname
+
+        Args:
+            fullname (str): the full pathname
+
+        Returns:
+            tuple[UUID, UUID]: (parent_id, child_id) pair
+        """
+
+    @abstractmethod
+    def get_corpus_ids_by_name(self, fullname: str) -> tuple[UUID, UUID]:
+        """Retrieve the parent namespace_id and the child corpus id from the pathname
+
+        Args:
+            fullname (str): the full pathname
+
+        Returns:
+            tuple[UUID, UUID]: (parent_id, child_id) pair
+        """
 
     @abstractmethod
     def create_namespace(self, namespace_pathname: str, *, parent_id: UUID = None) -> UUID:
@@ -66,6 +88,7 @@ class MemasMetadataStore(StorageDriver):
             UUID: uuid of the just created corpus
         """
 
+    @abstractmethod
     def get_corpus_info(self, corpus_pathname: str) -> CorpusInfo:
         """Gets the corpus info using the corpus pathname
 
@@ -76,14 +99,47 @@ class MemasMetadataStore(StorageDriver):
             CorpusInfo: Corpus Info object
         """
 
-    def get_query_corpora(self, namespace_pathname: str) -> set[UUID]:
-        """Retrieves the set of corpus ids this namespace user should query
+    @abstractmethod
+    def get_corpus_info_by_id(self, namespace_id: UUID, corpus_id: UUID) -> CorpusInfo:
+        """Gets the corpus info using the corpus id and namespace id
+
+        Args:
+            namespace_id (UUID): parent namespace id of the corpus
+            corpus_id (UUID): corpus id of the corpus
+
+        Returns:
+            CorpusInfo: Corpus Info object
+        """
+
+    @abstractmethod
+    def get_query_corpora(self, namespace_pathname: str) -> set[CorpusInfo]:
+        """Retrieves the set of CorpusInfo objects this namespace user should query
 
         Args:
             namespace_pathname (str): the pathname of the querying user
 
         Returns:
-            set[UUID]: set of corpus ids
+            set[CorpusInfo]: set of CorpusInfo objects
+        """
+
+    @abstractmethod
+    def initiate_delete_corpus(self, parent_id: UUID, corpus_id: UUID, corpus_pathname: str):
+        """Initiate corpus deletion. This will free up the pathname, while marking the corpus as deleted.
+        Note that the parent and corpus ids are needed when recovering an interrupted delete
+
+        Args:
+            parent_id (UUID): parent namespace id of the corpus
+            corpus_id (UUID): child corpus id of the corpus
+            corpus_pathname (str): the full pathname of the corpus
+        """
+
+    @abstractmethod
+    def finish_delete_corpus(self, parent_id: UUID, corpus_id: UUID):
+        """Finish corpus deletion. This will fully delete a corpus' metadata.
+
+        Args:
+            parent_id (UUID): parent namespace id of the corpus
+            corpus_id (UUID): corpus id of the corpus
         """
 
 
@@ -98,6 +154,7 @@ class CorpusDocumentMetadataStore(StorageDriver):
         Args:
             corpus_id (UUID): corpus id
             document_id (UUID): document id
+            num_segments (int): number of segments the document is stored in
             citation (Citation): citation object
 
         Returns:
@@ -116,6 +173,14 @@ class CorpusDocumentMetadataStore(StorageDriver):
             Citation: Citation object of the document
         """
 
+    @abstractmethod
+    def delete_corpus(self, corpus_id: UUID):
+        """Deletes all citations under a corpus
+
+        Args:
+            corpus_id (UUID): corpus id
+        """
+
 
 @dataclass
 class DocumentEntity:
@@ -131,7 +196,7 @@ class CorpusDocumentStore(StorageDriver):
         Corpus Document Store for storing and searching documents
     """
     @abstractmethod
-    def save_documents(self, chunk_id_doc_pairs: list[str, DocumentEntity]) -> bool:
+    def save_documents(self, id_doc_pairs: list[str, DocumentEntity]) -> bool:
         """Save a set of documents into the document store
 
         Args:
@@ -139,6 +204,14 @@ class CorpusDocumentStore(StorageDriver):
 
         Returns:
             bool: success or not
+        """
+
+    @abstractmethod
+    def delete_corpus(self, corpus_id: UUID):
+        """delete all documents under a corpus
+
+        Args:
+            corpus_id (UUID): corpus id
         """
 
     @abstractmethod
@@ -169,6 +242,14 @@ class CorpusVectorStore(StorageDriver):
 
         Args:
             doc_entity (DocumentEntity): Document Entity object
+        """
+
+    @abstractmethod
+    def delete_corpus(self, corpus_id: UUID):
+        """delete all vectors under a corpus
+
+        Args:
+            corpus_id (UUID): the corpus id
         """
 
     @abstractmethod

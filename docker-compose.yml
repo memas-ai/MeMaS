@@ -38,6 +38,29 @@ services:
     # command: ./wait-for-it.sh milvus-standalone:19530 -t 300 -- gunicorn -w 1 -k eventlet 'memas.app:create_app(config_filename="memas-config.yml")'
     profiles: ["dev"]
 
+  memas-worker:
+    build: 
+      context: .
+    image: memas:latest
+    container_name: memas-worker
+    depends_on: 
+      memas-init:
+        condition: service_completed_successfully
+    env_file:
+      - .env
+    volumes:
+      - memas_data:/memas
+    command: celery --app memas.make_celery worker --loglevel INFO
+    profiles: ["dev"]
+
+  redis:
+    image: redis
+    container_name: redis
+    ports:
+      - 6379:6379
+    volumes:
+      - redis_data:/data
+
   scylla:
     image: scylladb/scylla
     container_name: scylla
@@ -63,6 +86,11 @@ services:
     volumes:
       - etcd_data:/etcd
     command: etcd -advertise-client-urls=http://127.0.0.1:2379 -listen-client-urls http://0.0.0.0:2379 --data-dir /etcd
+    healthcheck:
+      test: ["CMD", "etcdctl", "endpoint", "health"]
+      interval: 30s
+      timeout: 20s
+      retries: 3
 
   minio:
     container_name: milvus-minio
@@ -71,8 +99,8 @@ services:
       MINIO_ACCESS_KEY: minioadmin
       MINIO_SECRET_KEY: minioadmin
     volumes:
-      - minio_data:/data
-    command: minio server /data
+      - minio_data:/minio_data
+    command: minio server /minio_data --console-address ":9001"
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
       interval: 30s
@@ -81,7 +109,7 @@ services:
 
   milvus:
     container_name: milvus-standalone
-    image: milvusdb/milvus:v2.2.8
+    image: milvusdb/milvus:v2.3.2
     command: ["milvus", "run", "standalone"]
     environment:
       ETCD_ENDPOINTS: etcd:2379
@@ -115,6 +143,9 @@ services:
 
 volumes:
   memas_data:
+    driver: local
+
+  redis_data:
     driver: local
 
   esdata01:

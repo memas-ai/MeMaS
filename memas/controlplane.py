@@ -1,4 +1,5 @@
 from flask import Blueprint, current_app, request
+import memas.celery_worker as worker
 from memas.context_manager import ctx
 from memas.interface.corpus import CorpusType
 
@@ -29,4 +30,22 @@ def create_corpus():
     else:
         current_app.logger.error(f"Corpus type not supported [corpus_type={corpus_type}]")
         raise NotImplementedError(f"Corpus Type '{corpus_type}' not supported")
+    return {"success": True}
+
+
+@controlplane.route('/delete_corpus', methods=["POST"])
+def delete_corpus():
+    corpus_pathname = request.json["corpus_pathname"]
+
+    current_app.logger.info(f"Delete corpus [corpus_pathname=\"{corpus_pathname}\"]")
+
+    # Get ids will raise an exception if the pathname is not found
+    parent_id, corpus_id = ctx.memas_metadata.get_corpus_ids_by_name(corpus_pathname)
+
+    # The order is important here, first queue up the delete job
+    worker.delete_corpus.delay(parent_id, corpus_id, corpus_pathname)
+
+    # Now initiate the delete, so the corpus can't be accessed by users
+    ctx.memas_metadata.initiate_delete_corpus(parent_id, corpus_id, corpus_pathname)
+
     return {"success": True}

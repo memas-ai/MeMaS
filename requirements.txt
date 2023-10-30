@@ -1,7 +1,8 @@
 flask==2.3.2
+celery[redis]
 tensorflow==2.12.0
 tensorflow_hub
-pymilvus==2.2.8
+pymilvus==2.3.2
 elasticsearch==8.8.0
 scylla-driver==3.26.2
 nltk

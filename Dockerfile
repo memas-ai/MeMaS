@@ -24,7 +24,7 @@ COPY --chmod=0755 memas-docker/init.sh ./init.sh
 
 # Copy in the default config
 ARG conf_file=memas-config.yml
-ENV conf_file=${conf_file}
+ENV MEMAS_CONF_FILE=${conf_file}
 COPY memas-docker/${conf_file} ./memas/${conf_file}
 # TODO: provide way to use custom configs in docker compose
 
@@ -34,4 +34,4 @@ ENV PYTHONPATH "$PYTHONPATH:memas"
 
 
 EXPOSE 8010
-CMD gunicorn -b :8010 -w 1 -k eventlet "memas.app:create_app(config_filename=\"${conf_file}\")"
+CMD gunicorn -b :8010 -w 1 -k eventlet "memas.app:create_app()"
