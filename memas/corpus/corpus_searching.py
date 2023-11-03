@@ -1,17 +1,48 @@
 # from search_redirect import SearchSettings
 from uuid import UUID
 from functools import reduce
-from memas.interface.corpus import Corpus, CorpusFactory
+from memas.interface.corpus import Corpus, CorpusFactory, CorpusType
 from memas.interface.corpus import Citation
 from memas.interface.storage_driver import DocumentEntity
 from memas.interface.exceptions import SentenceLengthOverflowException
 
 
-def corpora_search(corpus_ids: list[UUID], clue: str) -> list[tuple[float, str, Citation]]:
+def mult_corpus_search(corpus_sets : dict[Corpus], clue, ctx, result_limit) -> list[tuple[float, str, Citation]]:
+    results = []
+
+    # Direct each multicorpus search to the right algorithm
+    for corpusType, corpora_list in corpus_sets.items() :
+        # Default basic corpus handling
+        if corpusType == CorpusType.KNOWLEDGE or corpusType == CorpusType.CONVERSATION :
+            corpus_type_results = basic_corpora_search(corpora_list, clue, ctx)
+
+            results.append(corpus_type_results)
+
+    # To combine results for corpora that don't have compareable scoring take equal sized subsets of each Corpus type
+    # TODO : This means that, for example, searching 1 conversation and 100 knowledge corpuses will return half of the
+    # results from the conversation corpus. Is that really the way to go?
+    combined_results = []
+    for j in range(max([len(x) for x in results])) :
+        for i in range(len(results)) :
+            if j >= len(results[i]) or len(combined_results) >= result_limit:
+                break
+            combined_results.append(results[i][j])
+        if len(combined_results) >= result_limit:
+            break
+
+    return combined_results
+
+"""
+All corpora here should be of the same CorpusType implementation (basic_corpus)
+"""
+def basic_corpora_search(corpora: list[Corpus], clue: str, ctx) -> list[tuple[float, str, Citation]]:
+    # Extract information needed for a search
+    corpus_ids = [x.corpus_id for x in corpora]
+
     vector_search_count: int = 10
 
     doc_store_results: list[tuple[float, str, Citation]] = []
-    temp_res = ctx.corpus_doc.multi_corpus_search(corpus_ids, clue)
+    temp_res = ctx.corpus_doc.search_corpora(corpus_ids, clue)
     # Search the document store
     for score, doc_entity in temp_res:
         document_text = doc_entity.document
@@ -21,7 +52,7 @@ def corpora_search(corpus_ids: list[UUID], clue: str) -> list[tuple[float, str, 
 
     # Search for the vectors
     vec_store_results: list[tuple[float, str, Citation]] = []
-    temp_res2 = ctx.corpus_vec.multi_corpus_search(corpus_ids, clue)
+    temp_res2 = ctx.corpus_vec.search_corpora(corpus_ids, clue)
     for score, doc_entity, start_index, end_index in temp_res2:
 
         # Verify that the text recovered from the vectors fits the maximum sentence criteria
