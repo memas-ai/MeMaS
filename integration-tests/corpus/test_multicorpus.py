@@ -38,4 +38,7 @@ def test_multicorpus_search(ctx, test_client):
     output = mult_corpus_search(corpus_dict, "It is sunny", ctx, 5)
     # Check that text was retrieved from all 3 corpuses upon searching
     assert len(output) == 3
+    
+    assert "sunshine" in output[1][1]
+    assert "weather" in output[0][1]
 

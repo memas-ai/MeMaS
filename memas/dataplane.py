@@ -39,11 +39,10 @@ def recall():
     search_results = mult_corpus_search(corpora_grouped_by_type, clue, ctx, 4)
     current_app.logger.debug(f"Search Results are: {search_results}")
 
-
     # TODO : It will improve Query speed significantly to fetch citations after determining which documents to send to user
 
     # Take only top few scores and remove scoring element before sending
-    return [{"document": doc, "citation": asdict(citation)} for doc, citation in search_results[0:5]]
+    return [{"score" : score, "document": doc, "citation": asdict(citation)} for score, doc, citation in search_results[0:5]]
 
 
 @dataplane.route('/memorize', methods=["POST"])

@@ -25,8 +25,8 @@ def test_save_then_search_one_corpus(ctx):
     output = test_corpus.search("It is sunny")
     # print("OUTPUT IS : ")
     # print(output)
-    assert "sunshine" in output[1][0]
-    assert "weather" in output[0][0]
+    assert "sunshine" in output[1][1]
+    assert "weather" in output[0][1]
 
 
 def test_delete_all_content(ctx):
@@ -45,7 +45,7 @@ def test_delete_all_content(ctx):
 
     time.sleep(1)
     output = test_corpus.search("It is sunny")
-    assert "sunshine" in output[1][0]
+    assert "sunshine" in output[1][1]
 
     test_corpus.delete_all_content()
     time.sleep(1)

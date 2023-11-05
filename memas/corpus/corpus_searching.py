@@ -3,30 +3,37 @@ from uuid import UUID
 from functools import reduce
 from memas.interface.corpus import Corpus, CorpusFactory, CorpusType
 from memas.interface.corpus import Citation
+from collections import defaultdict 
 from memas.interface.storage_driver import DocumentEntity
 from memas.interface.exceptions import SentenceLengthOverflowException
 
 
 def mult_corpus_search(corpus_sets : dict[Corpus], clue, ctx, result_limit) -> list[tuple[float, str, Citation]]:
-    results = []
+    results = defaultdict(list)
 
     # Direct each multicorpus search to the right algorithm
     for corpusType, corpora_list in corpus_sets.items() :
         # Default basic corpus handling
         if corpusType == CorpusType.KNOWLEDGE or corpusType == CorpusType.CONVERSATION :
             corpus_type_results = basic_corpora_search(corpora_list, clue, ctx)
+            results["BASIC_SCORING"].extend(corpus_type_results)
 
-            results.append(corpus_type_results)
+
+    sorted_results_matrix = []
+    # Sort results with compareable scoring schemes
+    for scored_results in results.values() :
+        # Sort by descending scoring so best results come first
+        sorted_scored_results = sorted(scored_results, key=lambda x: x[0], reverse=True)
+        sorted_results_matrix.append(sorted_scored_results)
 
     # To combine results for corpora that don't have compareable scoring take equal sized subsets of each Corpus type
-    # TODO : This means that, for example, searching 1 conversation and 100 knowledge corpuses will return half of the
-    # results from the conversation corpus. Is that really the way to go?
+    # TODO : Consider changing this at some point in the future to have better searching of corpus sets with non-comparable scoring
     combined_results = []
-    for j in range(max([len(x) for x in results])) :
-        for i in range(len(results)) :
-            if j >= len(results[i]) or len(combined_results) >= result_limit:
+    for j in range(max([len(x) for x in sorted_results_matrix])) :
+        for i in range(len(sorted_results_matrix)) :
+            if j >= len(sorted_results_matrix[i]) or len(combined_results) >= result_limit:
                 break
-            combined_results.append(results[i][j])
+            combined_results.append(sorted_results_matrix[i][j])
         if len(combined_results) >= result_limit:
             break
 
@@ -148,7 +155,4 @@ def normalize_and_combine(doc_results: list, vec_results: list):
 
     doc_results_normalized.extend(unique_vectors)
 
-    # Sort by descending scoring so best results come first
-    doc_results_normalized.sort(key=lambda x: x[0], reverse=True)
-
-    return [(y, z) for [x, y, z] in doc_results_normalized]
+    return doc_results_normalized
