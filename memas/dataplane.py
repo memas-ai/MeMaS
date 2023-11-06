@@ -1,7 +1,10 @@
 from dataclasses import asdict
 from flask import Blueprint, current_app, request
 from memas.context_manager import ctx
+from memas.corpus.corpus_searching import multi_corpus_search
 from memas.interface.corpus import Citation, Corpus, CorpusType
+from collections import defaultdict
+from memas.interface.namespace import CORPUS_SEPARATOR
 
 
 dataplane = Blueprint("dp", __name__, url_prefix="/dp")
@@ -17,18 +20,27 @@ def recall():
     corpus_infos = ctx.memas_metadata.get_query_corpora(namespace_pathname)
 
     current_app.logger.debug(f"Querying corpuses: {corpus_infos}")
-    search_results: list[tuple[str, Citation]] = []
-    for corpus_info in corpus_infos:
-        corpus: Corpus = ctx.corpus_provider.get_corpus_by_info(corpus_info)
-        search_results.extend(corpus.search(clue=clue))
+    # search_results: list[tuple[str, Citation]] = []
+    # for corpus_info in corpus_infos:
+    #     corpus: Corpus = ctx.corpus_provider.get_corpus_by_info(corpus_info)
+    #     search_results.extend(corpus.search(clue=clue))
 
-    # Combine the results and only take the top ones
-    search_results.sort(key=lambda x: x[0], reverse=True)
+    # Group the corpora to search into sets based on their CorpusType
+    corpora_grouped_by_type = defaultdict(list)
+    for corpus_info in corpus_infos:
+        corpus_type = corpus_info.corpus_type
+        corpus: Corpus = ctx.corpus_provider.get_corpus_by_info(corpus_info)
+        corpora_grouped_by_type[corpus_type].append(corpus)
+
+    # Execute a multicorpus search
+    # TODO : Should look into refactor to remove ctx later and have a cleaner solution
+    search_results = multi_corpus_search(corpora_grouped_by_type, clue, ctx, 4)
+    current_app.logger.debug(f"Search Results are: {search_results}")
 
     # TODO : It will improve Query speed significantly to fetch citations after determining which documents to send to user
 
     # Take only top few scores and remove scoring element before sending
-    return [{"document": doc, "citation": asdict(citation)} for doc, citation in search_results[0:5]]
+    return [{"document": doc, "citation": asdict(citation)} for score, doc, citation in search_results[0:5]]
 
 
 @dataplane.route('/memorize', methods=["POST"])

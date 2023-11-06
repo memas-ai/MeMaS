@@ -1,17 +1,55 @@
 # from search_redirect import SearchSettings
 from uuid import UUID
 from functools import reduce
-from memas.interface.corpus import Corpus, CorpusFactory
+from memas.interface.corpus import Corpus, CorpusFactory, CorpusType
 from memas.interface.corpus import Citation
+from collections import defaultdict
 from memas.interface.storage_driver import DocumentEntity
 from memas.interface.exceptions import SentenceLengthOverflowException
 
 
-def corpora_search(corpus_ids: list[UUID], clue: str) -> list[tuple[float, str, Citation]]:
-    vector_search_count: int = 10
+def multi_corpus_search(corpus_sets: dict[CorpusType, list[Corpus]], clue: str, ctx, result_limit: int) -> list[tuple[float, str, Citation]]:
+    results = defaultdict(list)
+
+    # Direct each multicorpus search to the right algorithm
+    for corpus_type, corpora_list in corpus_sets.items():
+        # Default basic corpus handling
+        if corpus_type == CorpusType.KNOWLEDGE or corpus_type == CorpusType.CONVERSATION:
+            corpus_type_results = basic_corpora_search(corpora_list, clue, ctx)
+            results["BASIC_SCORING"].extend(corpus_type_results)
+
+    sorted_results_matrix = []
+    # Sort results with compareable scoring schemes
+    for scored_results in results.values():
+        # Sort by descending scoring so best results come first
+        sorted_scored_results = sorted(scored_results, key=lambda x: x[0], reverse=True)
+        sorted_results_matrix.append(sorted_scored_results)
+
+    # To combine results for corpora that don't have compareable scoring take equal sized subsets of each Corpus type
+    # TODO : Consider changing this at some point in the future to have better searching of corpus sets with non-comparable scoring
+    combined_results = []
+    for j in range(max([len(x) for x in sorted_results_matrix])):
+        for i in range(len(sorted_results_matrix)):
+            if j >= len(sorted_results_matrix[i]) or len(combined_results) >= result_limit:
+                break
+            combined_results.append(sorted_results_matrix[i][j])
+        if len(combined_results) >= result_limit:
+            break
+
+    return combined_results
+
+
+"""
+All corpora here should be of the same CorpusType implementation (basic_corpus)
+"""
+
+
+def basic_corpora_search(corpora: list[Corpus], clue: str, ctx) -> list[tuple[float, str, Citation]]:
+    # Extract information needed for a search
+    corpus_ids = [x.corpus_id for x in corpora]
 
     doc_store_results: list[tuple[float, str, Citation]] = []
-    temp_res = ctx.corpus_doc.multi_corpus_search(corpus_ids, clue)
+    temp_res = ctx.corpus_doc.search_corpora(corpus_ids, clue)
     # Search the document store
     for score, doc_entity in temp_res:
         document_text = doc_entity.document
@@ -21,7 +59,7 @@ def corpora_search(corpus_ids: list[UUID], clue: str) -> list[tuple[float, str, 
 
     # Search for the vectors
     vec_store_results: list[tuple[float, str, Citation]] = []
-    temp_res2 = ctx.corpus_vec.multi_corpus_search(corpus_ids, clue)
+    temp_res2 = ctx.corpus_vec.search_corpora(corpus_ids, clue)
     for score, doc_entity, start_index, end_index in temp_res2:
 
         # Verify that the text recovered from the vectors fits the maximum sentence criteria
@@ -32,10 +70,6 @@ def corpora_search(corpus_ids: list[UUID], clue: str) -> list[tuple[float, str, 
         citation = ctx.corpus_metadata.get_document_citation(doc_entity.corpus_id, doc_entity.document_id)
 
         vec_store_results.append([score, doc_entity.document, citation])
-
-    # print("Docs then Vecs : ")
-    # print(doc_store_results)
-    # print(vec_store_results)
 
     # If any of the searches returned no results combine and return
     if len(vec_store_results) == 0:
@@ -52,10 +86,6 @@ def corpora_search(corpus_ids: list[UUID], clue: str) -> list[tuple[float, str, 
 
 
 def normalize_and_combine(doc_results: list, vec_results: list):
-    # print("Docs then Vecs : ")
-    # print(doc_results)
-    # print(vec_results)
-
     # normalization with assumption that top score matches are approximately equal
 
     # Vec scores are based on distance, so smaller is better. Need to inverse the
@@ -117,7 +147,4 @@ def normalize_and_combine(doc_results: list, vec_results: list):
 
     doc_results_normalized.extend(unique_vectors)
 
-    # Sort by descending scoring so best results come first
-    doc_results_normalized.sort(key=lambda x: x[0], reverse=True)
-
-    return [(y, z) for [x, y, z] in doc_results_normalized]
+    return doc_results_normalized
