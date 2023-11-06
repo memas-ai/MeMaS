@@ -8,13 +8,13 @@ from memas.interface.storage_driver import DocumentEntity
 from memas.interface.exceptions import SentenceLengthOverflowException
 
 
-def mult_corpus_search(corpus_sets : dict[Corpus], clue, ctx, result_limit) -> list[tuple[float, str, Citation]]:
+def multi_corpus_search(corpus_sets : dict[CorpusType, list[Corpus]], clue : str, ctx, result_limit : int) -> list[tuple[float, str, Citation]]:
     results = defaultdict(list)
 
     # Direct each multicorpus search to the right algorithm
-    for corpusType, corpora_list in corpus_sets.items() :
+    for corpus_type, corpora_list in corpus_sets.items() :
         # Default basic corpus handling
-        if corpusType == CorpusType.KNOWLEDGE or corpusType == CorpusType.CONVERSATION :
+        if corpus_type == CorpusType.KNOWLEDGE or corpus_type == CorpusType.CONVERSATION :
             corpus_type_results = basic_corpora_search(corpora_list, clue, ctx)
             results["BASIC_SCORING"].extend(corpus_type_results)
 
@@ -46,8 +46,6 @@ def basic_corpora_search(corpora: list[Corpus], clue: str, ctx) -> list[tuple[fl
     # Extract information needed for a search
     corpus_ids = [x.corpus_id for x in corpora]
 
-    vector_search_count: int = 10
-
     doc_store_results: list[tuple[float, str, Citation]] = []
     temp_res = ctx.corpus_doc.search_corpora(corpus_ids, clue)
     # Search the document store
@@ -71,10 +69,6 @@ def basic_corpora_search(corpora: list[Corpus], clue: str, ctx) -> list[tuple[fl
 
         vec_store_results.append([score, doc_entity.document, citation])
 
-    # print("Docs then Vecs : ")
-    # print(doc_store_results)
-    # print(vec_store_results)
-
     # If any of the searches returned no results combine and return
     if len(vec_store_results) == 0:
         doc_store_results.sort(key=lambda x: x[0], reverse=True)
@@ -90,10 +84,6 @@ def basic_corpora_search(corpora: list[Corpus], clue: str, ctx) -> list[tuple[fl
 
 
 def normalize_and_combine(doc_results: list, vec_results: list):
-    # print("Docs then Vecs : ")
-    # print(doc_results)
-    # print(vec_results)
-
     # normalization with assumption that top score matches are approximately equal
 
     # Vec scores are based on distance, so smaller is better. Need to inverse the

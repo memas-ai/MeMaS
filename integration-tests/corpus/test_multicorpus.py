@@ -2,7 +2,7 @@ import numpy as np
 import uuid
 import time
 from memas.corpus import basic_corpus
-from memas.corpus.corpus_searching import mult_corpus_search
+from memas.corpus.corpus_searching import multi_corpus_search
 from memas.interface.corpus import Citation, CorpusInfo, CorpusType
 
 corpus_name = "test corpus1"
@@ -35,7 +35,7 @@ def test_multicorpus_search(ctx, test_client):
     corpus_dict[CorpusType.CONVERSATION] = [test_corpus1, test_corpus3]
     corpus_dict[CorpusType.KNOWLEDGE] = [test_corpus2]
 
-    output = mult_corpus_search(corpus_dict, "It is sunny", ctx, 5)
+    output = multi_corpus_search(corpus_dict, "It is sunny", ctx, 5)
     # Check that text was retrieved from all 3 corpuses upon searching
     assert len(output) == 3
     
