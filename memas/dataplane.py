@@ -3,9 +3,8 @@ from flask import Blueprint, current_app, request
 from memas.context_manager import ctx
 from memas.corpus.corpus_searching import multi_corpus_search
 from memas.interface.corpus import Citation, Corpus, CorpusType
-from collections import defaultdict 
+from collections import defaultdict
 from memas.interface.namespace import CORPUS_SEPARATOR
-
 
 
 dataplane = Blueprint("dp", __name__, url_prefix="/dp")
@@ -18,7 +17,6 @@ def recall():
 
     current_app.logger.info(f"Recalling [namespace_pathname=\"{namespace_pathname}\"]")
 
-
     corpus_infos = ctx.memas_metadata.get_query_corpora(namespace_pathname)
 
     current_app.logger.debug(f"Querying corpuses: {corpus_infos}")
@@ -29,7 +27,7 @@ def recall():
 
     # Group the corpora to search into sets based on their CorpusType
     corpora_grouped_by_type = defaultdict(list)
-    for corpus_info in corpus_infos :
+    for corpus_info in corpus_infos:
         corpus_type = corpus_info.corpus_type
         corpus: Corpus = ctx.corpus_provider.get_corpus_by_info(corpus_info)
         corpora_grouped_by_type[corpus_type].append(corpus)

@@ -28,7 +28,6 @@ def test_multicorpus_search(ctx, test_client):
     assert test_corpus2.store_and_index(text2, Citation("were.docsource2", "SSSdoc2", "", "doc2"))
     assert test_corpus3.store_and_index(text3, Citation("docsource3.ai", "SSSdoc3", "", "doc3"))
 
-    
     time.sleep(1)
 
     corpus_dict = {}
@@ -38,7 +37,6 @@ def test_multicorpus_search(ctx, test_client):
     output = multi_corpus_search(corpus_dict, "It is sunny", ctx, 5)
     # Check that text was retrieved from all 3 corpuses upon searching
     assert len(output) == 3
-    
+
     assert "sunshine" in output[1][1]
     assert "weather" in output[0][1]
-

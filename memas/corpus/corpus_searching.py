@@ -3,25 +3,24 @@ from uuid import UUID
 from functools import reduce
 from memas.interface.corpus import Corpus, CorpusFactory, CorpusType
 from memas.interface.corpus import Citation
-from collections import defaultdict 
+from collections import defaultdict
 from memas.interface.storage_driver import DocumentEntity
 from memas.interface.exceptions import SentenceLengthOverflowException
 
 
-def multi_corpus_search(corpus_sets : dict[CorpusType, list[Corpus]], clue : str, ctx, result_limit : int) -> list[tuple[float, str, Citation]]:
+def multi_corpus_search(corpus_sets: dict[CorpusType, list[Corpus]], clue: str, ctx, result_limit: int) -> list[tuple[float, str, Citation]]:
     results = defaultdict(list)
 
     # Direct each multicorpus search to the right algorithm
-    for corpus_type, corpora_list in corpus_sets.items() :
+    for corpus_type, corpora_list in corpus_sets.items():
         # Default basic corpus handling
-        if corpus_type == CorpusType.KNOWLEDGE or corpus_type == CorpusType.CONVERSATION :
+        if corpus_type == CorpusType.KNOWLEDGE or corpus_type == CorpusType.CONVERSATION:
             corpus_type_results = basic_corpora_search(corpora_list, clue, ctx)
             results["BASIC_SCORING"].extend(corpus_type_results)
 
-
     sorted_results_matrix = []
     # Sort results with compareable scoring schemes
-    for scored_results in results.values() :
+    for scored_results in results.values():
         # Sort by descending scoring so best results come first
         sorted_scored_results = sorted(scored_results, key=lambda x: x[0], reverse=True)
         sorted_results_matrix.append(sorted_scored_results)
@@ -29,8 +28,8 @@ def multi_corpus_search(corpus_sets : dict[CorpusType, list[Corpus]], clue : str
     # To combine results for corpora that don't have compareable scoring take equal sized subsets of each Corpus type
     # TODO : Consider changing this at some point in the future to have better searching of corpus sets with non-comparable scoring
     combined_results = []
-    for j in range(max([len(x) for x in sorted_results_matrix])) :
-        for i in range(len(sorted_results_matrix)) :
+    for j in range(max([len(x) for x in sorted_results_matrix])):
+        for i in range(len(sorted_results_matrix)):
             if j >= len(sorted_results_matrix[i]) or len(combined_results) >= result_limit:
                 break
             combined_results.append(sorted_results_matrix[i][j])
@@ -39,9 +38,12 @@ def multi_corpus_search(corpus_sets : dict[CorpusType, list[Corpus]], clue : str
 
     return combined_results
 
+
 """
 All corpora here should be of the same CorpusType implementation (basic_corpus)
 """
+
+
 def basic_corpora_search(corpora: list[Corpus], clue: str, ctx) -> list[tuple[float, str, Citation]]:
     # Extract information needed for a search
     corpus_ids = [x.corpus_id for x in corpora]
