@@ -6,19 +6,45 @@ from memas.interface.corpus import CorpusType
 controlplane = Blueprint("cp", __name__, url_prefix="/cp")
 
 
-@controlplane.route('/create_user', methods=["POST"])
-def create_user():
+@controlplane.route('/user', methods=["POST", "DELETE"])
+def user_endpoint():
     namespace_pathname = request.json["namespace_pathname"]
+    if request.method == 'POST':
+        return create_user(namespace_pathname)
+    elif request.method == 'DELETE':
+        return delete_user(namespace_pathname)
+    else:
+        raise NotImplementedError(f"Request Type '{request.method}' not supported")
 
+
+def create_user(namespace_pathname: str):
     current_app.logger.info(f"Create user [namespace_pathname=\"{namespace_pathname}\"]")
 
     ctx.memas_metadata.create_namespace(namespace_pathname)
     return {"success": True}
 
 
-@controlplane.route('/create_corpus', methods=["POST"])
-def create_corpus():
+def delete_user(namespace_pathname: str):
+    current_app.logger.info(f"Delete user [namespace_pathname=\"{namespace_pathname}\"]")
+
+    # TODO: need to implement
+    ctx.memas_metadata.create_namespace(namespace_pathname)
+    return {"success": True}
+
+
+@controlplane.route('/corpus', methods=["POST", "DELETE"])
+def corpus_endpoint():
+    namespace_pathname = request.json["namespace_pathname"]
     corpus_pathname = request.json["corpus_pathname"]
+    if request.method == 'POST':
+        return create_corpus(namespace_pathname, corpus_pathname)
+    elif request.method == 'DELETE':
+        return delete_corpus(namespace_pathname, corpus_pathname)
+    else:
+        raise NotImplementedError(f"Request Type '{request.method}' not supported")
+
+
+def create_corpus(namespace_pathname: str, corpus_pathname: str):
     corpus_type = request.json.get("corpus_type", CorpusType.CONVERSATION.value)
 
     current_app.logger.info(f"Create corpus [corpus_pathname=\"{corpus_pathname}\"] [corpus_type={corpus_type}]")
@@ -33,10 +59,7 @@ def create_corpus():
     return {"success": True}
 
 
-@controlplane.route('/delete_corpus', methods=["POST"])
-def delete_corpus():
-    corpus_pathname = request.json["corpus_pathname"]
-
+def delete_corpus(namespace_pathname: str, corpus_pathname: str):
     current_app.logger.info(f"Delete corpus [corpus_pathname=\"{corpus_pathname}\"]")
 
     # Get ids will raise an exception if the pathname is not found

@@ -10,7 +10,7 @@ from memas.interface.namespace import CORPUS_SEPARATOR
 dataplane = Blueprint("dp", __name__, url_prefix="/dp")
 
 
-@dataplane.route('/recall', methods=["POST"])
+@dataplane.route('/recall', methods=["GET"])
 def recall():
     namespace_pathname: str = request.json["namespace_pathname"]
     clue: str = request.json["clue"]
