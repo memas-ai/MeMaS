@@ -4,6 +4,8 @@ import yaml
 from celery import Celery, Task
 from flask import Flask
 from memas.context_manager import read_env, ContextManager
+from memas.controlplane import controlplane
+from memas.dataplane import dataplane
 from memas.interface.exceptions import MemasException
 
 
@@ -42,8 +44,6 @@ def create_app(*, config_filename=None, first_init=False):
 
     celery_init_app(app)
 
-    from memas.dataplane import dataplane
-    from memas.controlplane import controlplane
     app.register_blueprint(dataplane)
     app.register_blueprint(controlplane)
 
