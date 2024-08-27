@@ -1,3 +1,6 @@
+# MeMaS is kind of dead
+**Unfortunately, with players like OpenAI and cloud providers all offering their own memory solutions, we no longer think it makes sense to continue this project. The project is archived for the time being.**
+
 # MeMaS: a Long Term Memory Store for AI Chatbots and Agents
 [![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
 [![](https://dcbadge.vercel.app/api/server/j2NvzK5qN7?compact=true&style=flat)](https://discord.gg/j2NvzK5qN7)
